@@ -2,40 +2,27 @@
 
 These are two different questions, and conflating them causes real outages:
 
-* ``/health`` — "is this process alive?" If it fails, the orchestrator restarts
-  the container. It must therefore check *nothing external*: a database blip
-  would otherwise trigger a restart loop that makes the outage worse.
+* ``/health`` — "is this process alive?" If it fails, the orchestrator restarts the
+  container. It must therefore check *nothing external*: a brief database blip would
+  otherwise trigger a restart loop that makes the outage considerably worse.
 
-* ``/ready``  — "should this instance receive traffic?" It checks dependencies.
-  If it fails, the instance is pulled from the load balancer but left running,
-  so it can recover on its own.
+* ``/ready``  — "should this instance receive traffic?" It checks dependencies. If it
+  fails, the instance is pulled from the load balancer but left running, so it can
+  recover on its own.
 
-CP5/CP11 give ``/ready`` real dependency checks.
+CP5 and CP12 give ``/ready`` real dependency checks.
 """
 
-from typing import Literal
-
 from fastapi import APIRouter
-from pydantic import BaseModel
+
+from app.api.v1.schemas.health import HealthResponse, ReadyResponse
+from app.core.config import get_settings
 
 router = APIRouter(tags=["health"])
 
 
-class HealthResponse(BaseModel):
-    status: Literal["ok"]
-    app: str
-    environment: str
-
-
-class ReadyResponse(BaseModel):
-    status: Literal["ready", "degraded"]
-    checks: dict[str, bool]
-
-
 @router.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
-    from app.core.config import get_settings
-
     settings = get_settings()
     return HealthResponse(
         status="ok",

@@ -262,19 +262,19 @@ class MedReportError(Exception):
 
 # --- domain errors: the caller did something invalid -----------------
 class DomainError(MedReportError): ...
-class ProfileNotFound(DomainError): ...
-class DuplicateReport(DomainError): ...
-class UnsupportedFileType(DomainError): ...
+class ProfileNotFoundError(DomainError): ...
+class DuplicateReportError(DomainError): ...
+class UnsupportedFileTypeError(DomainError): ...
 
 # --- infrastructure errors: something we depend on failed ------------
 class InfrastructureError(MedReportError): ...
-class StorageUnavailable(InfrastructureError): ...
-class LLMUnavailable(InfrastructureError): ...
-class LLMInvalidOutput(InfrastructureError): ...
+class StorageUnavailableError(InfrastructureError): ...
+class LLMUnavailableError(InfrastructureError): ...
+class LLMInvalidOutputError(InfrastructureError): ...
 
 # --- pipeline errors -------------------------------------------------
 class PipelineError(MedReportError): ...
-class UnreadableDocument(PipelineError): ...
+class UnreadableDocumentError(PipelineError): ...
 ```
 
 **Why the split matters:** `DomainError` maps to 4xx, must not be retried, and is the
@@ -289,9 +289,9 @@ systems, one taxonomy.
 2. **Never swallow.** `except: pass` is banned. To deliberately ignore something, log
    at debug with a comment saying why.
 3. **Translate at boundaries.** Adapters convert foreign exceptions into ours:
-   `botocore.ClientError` becomes `StorageUnavailable`. The domain must never see a
+   `botocore.ClientError` becomes `StorageUnavailableError`. The domain must never see a
    `botocore` type — that would be an inward dependency, breaking rule #1.
-4. **Errors carry context, not prose.** `ProfileNotFound(profile_id=...)`, not
+4. **Errors carry context, not prose.** `ProfileNotFoundError(profile_id=...)`, not
    `Exception("profile 3f2a not found")`. Structured fields are greppable and
    loggable; strings are neither.
 5. **One mapper, at the edge.** A single `exception_handler` maps our hierarchy onto
@@ -300,10 +300,10 @@ systems, one taxonomy.
 ```python
 # api/error_handlers.py
 STATUS_MAP: dict[type[MedReportError], int] = {
-    ProfileNotFound:     404,
-    DuplicateReport:     409,
-    UnsupportedFileType: 415,
-    LLMUnavailable:      503,
+    ProfileNotFoundError:     404,
+    DuplicateReportError:     409,
+    UnsupportedFileTypeError: 415,
+    LLMUnavailableError:      503,
 }
 ```
 
@@ -324,8 +324,8 @@ all-or-nothing would be technically simpler and wrong for the product.
 ### Only retry what is worth retrying
 
 ```python
-RETRYABLE  = (LLMUnavailable, StorageUnavailable, TimeoutError, ConnectionError)
-NEVER_RETRY = (DomainError, LLMInvalidOutput)   # will fail identically forever
+RETRYABLE  = (LLMUnavailableError, StorageUnavailableError, TimeoutError, ConnectionError)
+NEVER_RETRY = (DomainError, LLMInvalidOutputError)   # will fail identically forever
 ```
 
 Retrying a validation error burns money and delays the user's answer to reach the

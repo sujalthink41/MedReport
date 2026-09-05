@@ -19,6 +19,7 @@ class Environment(StrEnum):
     STAGING = "staging"
     PRODUCTION = "production"
 
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -37,9 +38,21 @@ class Settings(BaseSettings):
     # Comma-separated in the env file: MEDREPORT_CORS_ORIGINS=http://localhost:3000
     cors_origins: list[str] = Field(default_factory=list)
 
+    log_level: str = "INFO"
+    # None means "decide from the environment": human-readable locally, JSON in
+    # anything deployed. Explicit true/false overrides that, which is occasionally
+    # useful when debugging a container.
+    log_json: bool | None = None
+
     @property
     def is_production(self) -> bool:
         return self.environment is Environment.PRODUCTION
+
+    @property
+    def use_json_logs(self) -> bool:
+        if self.log_json is not None:
+            return self.log_json
+        return self.environment is not Environment.LOCAL
 
 
 @lru_cache(maxsize=1)

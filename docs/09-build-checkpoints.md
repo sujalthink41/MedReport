@@ -302,7 +302,7 @@ as a boring, repeatable script.
 | | Checkpoint | Status |
 |---|---|---|
 | CP1 | Repo skeleton and tooling | ✅ |
-| CP2 | Config, logging, errors | ☐ |
+| CP2 | Config, logging, errors | ✅ |
 | CP3 | FastAPI skeleton and error mapping | ☐ |
 | CP4 | Domain models and ports | ☐ |
 | CP5 | Database and migrations | ☐ |
