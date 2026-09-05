@@ -7,7 +7,7 @@ async def test_health_reports_ok(client: AsyncClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "ok"
-    assert body["app"] == "Baseline"
+    assert body["app"] == "MedReport"
 
 
 async def test_ready_returns_checks(client: AsyncClient) -> None:

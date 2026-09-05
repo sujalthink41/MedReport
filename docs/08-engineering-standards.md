@@ -1,7 +1,7 @@
 # Engineering Standards
 
 This doc is both the rulebook and a teaching document. Every rule is grounded in
-*this* codebase — if a principle can't be shown with a real example from Baseline,
+*this* codebase — if a principle can't be shown with a real example from MedReport,
 it doesn't belong here.
 
 ---
@@ -257,23 +257,23 @@ not want anywhere near a medical number.
 
 ```python
 # domain/errors.py
-class BaselineError(Exception):
+class MedReportError(Exception):
     """Root. Everything we raise deliberately."""
 
 # --- domain errors: the caller did something invalid -----------------
-class DomainError(BaselineError): ...
+class DomainError(MedReportError): ...
 class ProfileNotFound(DomainError): ...
 class DuplicateReport(DomainError): ...
 class UnsupportedFileType(DomainError): ...
 
 # --- infrastructure errors: something we depend on failed ------------
-class InfrastructureError(BaselineError): ...
+class InfrastructureError(MedReportError): ...
 class StorageUnavailable(InfrastructureError): ...
 class LLMUnavailable(InfrastructureError): ...
 class LLMInvalidOutput(InfrastructureError): ...
 
 # --- pipeline errors -------------------------------------------------
-class PipelineError(BaselineError): ...
+class PipelineError(MedReportError): ...
 class UnreadableDocument(PipelineError): ...
 ```
 
@@ -299,7 +299,7 @@ systems, one taxonomy.
 
 ```python
 # api/error_handlers.py
-STATUS_MAP: dict[type[BaselineError], int] = {
+STATUS_MAP: dict[type[MedReportError], int] = {
     ProfileNotFound:     404,
     DuplicateReport:     409,
     UnsupportedFileType: 415,

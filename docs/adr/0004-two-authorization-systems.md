@@ -4,7 +4,7 @@
 
 ## Context
 
-Baseline needs access control. The obvious move is "add RBAC" — a `role` column on
+MedReport needs access control. The obvious move is "add RBAC" — a `role` column on
 `users`, then check it. That single mechanism does not fit the two very different
 questions we actually have to answer.
 

@@ -11,7 +11,7 @@ an hour, and it is the hour that makes every later checkpoint cheap.
 Before any file, hold one question in your head:
 
 > **If we threw away every piece of technology we use — FastAPI, Postgres, OpenAI,
-> Cloudflare — what would still be true about Baseline?**
+> Cloudflare — what would still be true about MedReport?**
 
 Some things survive:
 
@@ -139,7 +139,7 @@ paper.
 Delhi, true whether the order arrived by phone or app, true whichever farm sent the
 eggs. The recipe does not know any of those things exist.
 
-**In Baseline:**
+**In MedReport:**
 
 ```python
 # domain/services/classify.py
@@ -168,7 +168,7 @@ database, and no API key?* If yes, it belongs in `domain/`.
 water, fry the guanciale, temper the eggs — that draws on recipes (domain) and
 ingredients (ports).
 
-**In Baseline:** `UploadReport` — hash the file, check for a duplicate, store the
+**In MedReport:** `UploadReport` — hash the file, check for a duplicate, store the
 original, save the row, enqueue processing.
 
 **The distinction that trips everyone up:**
@@ -197,7 +197,7 @@ system do?"
 **Restaurant:** the menu. Not the cooking, not the suppliers — the list of things a
 customer can order.
 
-**In Baseline:** `application/use_cases/` will hold `upload_report.py`,
+**In MedReport:** `application/use_cases/` will hold `upload_report.py`,
 `share_profile.py`, `process_report.py`, `generate_prep_sheet.py`.
 
 **Intent, and this is the part people underestimate:** open that folder, read the
@@ -219,7 +219,7 @@ provides it.
 **Restaurant:** a hatch in the kitchen wall with `EGGS` written above it. The kitchen
 built that hatch and defined its size. It does not care which farm turns up.
 
-**In Baseline:**
+**In MedReport:**
 
 ```python
 # domain/ports/services.py
@@ -247,7 +247,7 @@ them are visible on the day you write it.
 **Restaurant:** Farm A, Farm B, the frozen warehouse. Different lorries, different
 prices, same hatch.
 
-**In Baseline:** `R2Storage` and `LocalDiskStorage` both satisfy `FileStorage`. The
+**In MedReport:** `R2Storage` and `LocalDiskStorage` both satisfy `FileStorage`. The
 composition root picks one. `UploadReport` never learns which.
 
 **Two directions** — the distinction the word "adapter" hides:
@@ -307,7 +307,7 @@ one thing and handing forward.
 **Restaurant:** the 40-minute dish. Prep station → grill → sauce → plating. Separate
 stations — and if plating goes wrong you re-plate, you do not re-grill the steak.
 
-**In Baseline:** `ingest → extract → verify → merge → normalize → classify → explain
+**In MedReport:** `ingest → extract → verify → merge → normalize → classify → explain
 → reason → prep_sheet`.
 
 **Why stages instead of one long function:**
@@ -483,7 +483,7 @@ The smallest real file. Four ideas packed into forty lines.
 - `StrEnum` over string literals: `Environment.PRODUCTION` is checkable by mypy;
   `"production"` is checkable by nobody, and `"prodution"` ships
 
-**Answer this:** why is `env_prefix = "BASELINE_"` worth the extra typing?
+**Answer this:** why is `env_prefix = "MEDREPORT_"` worth the extra typing?
 
 ### 5. `app/api/v1/routers/health.py` (10 min)
 

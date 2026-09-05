@@ -23,18 +23,18 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
-        env_prefix="BASELINE_",
+        env_prefix="MEDREPORT_",
         extra="ignore",
         frozen=True,  # settings are read-only once loaded
     )
 
-    app_name: str = "Baseline"
+    app_name: str = "MedReport"
     environment: Environment = Environment.LOCAL
     debug: bool = False
 
     api_v1_prefix: str = "/api/v1"
 
-    # Comma-separated in the env file: BASELINE_CORS_ORIGINS=http://localhost:3000
+    # Comma-separated in the env file: MEDREPORT_CORS_ORIGINS=http://localhost:3000
     cors_origins: list[str] = Field(default_factory=list)
 
     @property

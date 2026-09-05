@@ -1,7 +1,7 @@
 [project]
-name = "baseline-backend"
+name = "medreport-backend"
 version = "0.1.0"
-description = "Baseline — understand your lab reports"
+description = "MedReport — understand your lab reports"
 requires-python = ">=3.13"
 
 # Dependencies are added checkpoint by checkpoint, not all upfront.

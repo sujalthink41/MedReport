@@ -1,13 +1,13 @@
-# Baseline
+# MedReport
 
 **Upload a lab report. Understand what's off, what changed, and what to do about it.**
 
-Baseline reads lab reports (PDF or phone photo), explains every value in plain
+MedReport reads lab reports (PDF or phone photo), explains every value in plain
 language, and — because it holds every report you've ever uploaded — shows you the
 *direction* your health is moving, not just today's number.
 
-The thesis is in the name: what matters isn't a generic reference range,
-it's **your** baseline.
+The thesis: what matters isn't a generic reference range —
+it's **your** baseline, and which way it's moving.
 
 ---
 
@@ -23,7 +23,7 @@ A probabilistic model never decides whether a value is out of range.
 
 ## Framing
 
-Baseline helps people **understand** their reports. It does not diagnose, and it does
+MedReport helps people **understand** their reports. It does not diagnose, and it does
 not prescribe. See [`docs/06-safety.md`](docs/06-safety.md).
 
 ---

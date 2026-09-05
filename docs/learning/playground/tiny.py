@@ -1,6 +1,6 @@
 """The whole idea, in one small file. Run it:  python docs/learning/playground/tiny.py
 
-Forget Baseline for ten minutes. Here is a made-up app: sign up a user and send
+Forget MedReport for ten minutes. Here is a made-up app: sign up a user and send
 them a welcome message.
 """
 
@@ -55,7 +55,7 @@ class Notifier(Protocol):
 def signup(email: str, notifier: Notifier) -> None:
     if not is_valid_email(email):
         raise ValueError("bad email")
-    notifier.send(email, "Welcome to Baseline!")
+    notifier.send(email, "Welcome to MedReport!")
 
 
 # --- 4. ADAPTERS: things that satisfy the port ------------------------------
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     print("\n3. Same use case, in a test. No internet. No email sent.")
     fake = FakeNotifier()
     signup("sujal@example.com", fake)
-    assert fake.sent == [("sujal@example.com", "Welcome to Baseline!")]
+    assert fake.sent == [("sujal@example.com", "Welcome to MedReport!")]
     print("   test passed -- and it took 0 milliseconds")
 
     print("\n4. The rule, tested completely on its own:")
@@ -121,7 +121,7 @@ Three things just happened that are impossible in signup_bad():
   - you tested signup() without sending a real email
   - you tested the rule with no notifier existing at all
 
-In Baseline it is the same five things, bigger names:
+In MedReport it is the same five things, bigger names:
 
     classify()       =  DOMAIN     value + range -> band
     FileStorage      =  PORT       "I need to store bytes"

@@ -1,4 +1,4 @@
-# Baseline — Product Brief
+# MedReport — Product Brief
 
 ## One-liner
 Upload a lab report. Understand what's off, what changed, and what to do about it.
