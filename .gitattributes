@@ -1,0 +1,16 @@
+# Normalise line endings so Windows and Linux collaborators do not produce
+# "entire file changed" diffs. Stored as LF in git, checked out natively.
+* text=auto eol=lf
+
+*.py      text eol=lf
+*.md      text eol=lf
+*.toml    text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+Makefile  text eol=lf
+
+# Never touched by line-ending conversion
+*.png  binary
+*.jpg  binary
+*.pdf  binary
+*.ico  binary

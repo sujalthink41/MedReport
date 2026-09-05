@@ -1,0 +1,122 @@
+[project]
+name = "baseline-backend"
+version = "0.1.0"
+description = "Baseline — understand your lab reports"
+requires-python = ">=3.13"
+
+# Dependencies are added checkpoint by checkpoint, not all upfront.
+# An unused dependency is a security surface and a build cost with no benefit.
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.9",
+    "mypy>=1.14",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.25",
+    "pytest-cov>=6.0",
+    "httpx>=0.28",           # FastAPI TestClient transport
+    "import-linter>=2.1",    # enforces the dependency rule in CI
+    "pre-commit>=4.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+
+# ----------------------------------------------------------------------------
+# ruff — linter + formatter. Replaces black, isort, flake8, pyupgrade.
+# ----------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",     # pycodestyle
+    "F",          # pyflakes — unused imports/vars
+    "I",          # isort — import ordering
+    "N",          # pep8-naming
+    "UP",         # pyupgrade — modern syntax
+    "B",          # bugbear — real bug patterns
+    "A",          # builtin shadowing
+    "C4",         # comprehensions
+    "DTZ",        # naive datetimes — BANNED, see standards §9
+    "T20",        # print() left in code
+    "SIM",        # simplify
+    "TCH",        # type-checking-only imports
+    "PTH",        # pathlib over os.path
+    "RUF",
+    "ASYNC",      # blocking calls inside async funcs
+    "S",          # bandit — security
+    "ARG",        # unused arguments
+    "TRY",        # exception antipatterns
+    "BLE",        # blind `except Exception`
+]
+ignore = [
+    "TRY003",     # long messages outside exception class — our errors carry fields
+    "S101",       # assert — fine in tests
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "ARG", "PLR2004"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+# Belt and braces alongside import-linter. Fails fast, in the editor.
+"app.adapters".msg = "Domain and application layers must not import adapters. Depend on a port."
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+
+# ----------------------------------------------------------------------------
+# mypy — strict where correctness matters, pragmatic at the edges.
+# ----------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.13"
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_reexport = true
+show_error_codes = true
+plugins = ["pydantic.mypy"]
+
+# The core is strict. This is where bugs cost the most.
+[[tool.mypy.overrides]]
+module = ["app.domain.*", "app.application.*"]
+strict = true
+disallow_any_explicit = true
+
+# Adapters talk to untyped third-party libraries. Strictness there buys noise.
+[[tool.mypy.overrides]]
+module = ["app.adapters.*"]
+ignore_missing_imports = true
+
+
+# ----------------------------------------------------------------------------
+# pytest
+# ----------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-q --strict-markers --strict-config"
+markers = [
+    "integration: needs Postgres/Redis (docker compose up)",
+    "e2e: full stack",
+    "eval: golden-set scoring, not pass/fail",
+]
+
+[tool.coverage.report]
+# Coverage floor applies to the domain only — that is the part that must be correct.
+fail_under = 0        # raised to 90 at CP15, once there is domain logic to cover
+show_missing = true

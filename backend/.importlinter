@@ -1,0 +1,57 @@
+; The dependency rule, enforced by CI instead of by memory.
+;
+; Run with:  uv run lint-imports
+;
+; This file is the single most valuable piece of tooling in the repo. Architecture
+; that is only written down in a doc decays within weeks. Architecture that fails
+; the build survives.
+
+[importlinter]
+root_package = app
+include_external_packages = True
+
+
+[importlinter:contract:layers]
+name = Hexagonal layers — dependencies point inward only
+type = layers
+layers =
+    app.api : app.pipeline
+    app.application
+    app.domain
+; Read bottom-up: domain knows nothing. application may use domain.
+; api and pipeline are siblings (the ':' means "independent of each other") —
+; both are driving adapters, and neither may import the other.
+
+
+[importlinter:contract:domain-purity]
+name = Domain is pure — no frameworks, no IO, no adapters
+type = forbidden
+source_modules =
+    app.domain
+forbidden_modules =
+    app.adapters
+    app.api
+    app.pipeline
+    fastapi
+    sqlalchemy
+    alembic
+    celery
+    litellm
+    boto3
+    redis
+    httpx
+
+
+[importlinter:contract:application-purity]
+name = Application depends on ports, never on concrete adapters
+type = forbidden
+source_modules =
+    app.application
+forbidden_modules =
+    app.adapters
+    app.api
+    app.pipeline
+    sqlalchemy
+    celery
+    litellm
+    boto3
