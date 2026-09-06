@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install up down logs dev lint fmt types arch test test-unit cov check clean
+.PHONY: help install up down logs dev lint fmt types arch test test-fast cov check clean migrate migration db-shell
 
 help:  ## show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -37,8 +37,17 @@ arch:  ## enforce the dependency rule
 test:  ## full test suite
 	uv run pytest
 
-test-unit:  ## domain + application only — no docker required
-	uv run pytest tests/domain tests/application
+test-fast:  ## domain, application and api — no docker required
+	uv run pytest tests/domain tests/application tests/api
+
+migration:  ## generate a migration from model changes: make migration m="add x"
+	uv run alembic revision --autogenerate -m "$(m)"
+
+migrate:  ## apply migrations
+	uv run alembic upgrade head
+
+db-shell:  ## psql into the dev database
+	docker exec -it medreport-postgres-1 psql -U medreport -d medreport
 
 cov:  ## tests with coverage
 	uv run pytest --cov=app --cov-report=term-missing

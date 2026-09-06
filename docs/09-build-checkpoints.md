@@ -305,7 +305,7 @@ as a boring, repeatable script.
 | CP2 | Config, logging, errors | ✅ |
 | CP3 | FastAPI skeleton and error mapping | ✅ |
 | CP4 | Domain models and ports | ✅ |
-| CP5 | Database and migrations | ☐ |
+| CP5 | Database and migrations | ✅ |
 | CP6 | Repositories and Unit of Work | ☐ |
 | CP7 | Authentication — Google OAuth | ☐ |
 | CP8 | Authorization — RBAC and policy layer | ☐ |

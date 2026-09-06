@@ -12,6 +12,10 @@ dependencies = [
     "pydantic>=2.10",
     "pydantic-settings>=2.7",
     "structlog>=26.1.0",
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.31.0",
+    "alembic>=1.19.2",
+    "tzdata>=2026.3",
 ]
 
 [dependency-groups]
@@ -24,6 +28,7 @@ dev = [
     "httpx>=0.28",           # FastAPI TestClient transport
     "import-linter>=2.1",    # enforces the dependency rule in CI
     "pre-commit>=4.0",
+    "testcontainers[postgres]>=4.15.0",
 ]
 
 [build-system]

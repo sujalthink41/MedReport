@@ -12,7 +12,10 @@ services:
       POSTGRES_PASSWORD: medreport
       POSTGRES_DB: medreport
     ports:
-      - "5432:5432"
+      # 5433, not 5432: this machine already runs a native Postgres on the
+      # default port. Containers get their own port so both can coexist and
+      # nobody has to stop a service they rely on.
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -26,7 +29,8 @@ services:
     image: redis:7-alpine
     command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "6379:6379"
+      # 6380 for the same reason - a native Redis holds 6379.
+      - "6380:6379"
     volumes:
       - redisdata:/data
     healthcheck:

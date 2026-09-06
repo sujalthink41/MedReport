@@ -38,6 +38,13 @@ class Settings(BaseSettings):
     # Comma-separated in the env file: MEDREPORT_CORS_ORIGINS=http://localhost:3000
     cors_origins: list[str] = Field(default_factory=list)
 
+    database_url: str = "postgresql+asyncpg://medreport:medreport@localhost:5433/medreport"
+    database_echo: bool = False
+    # Sizing note: pool_size + max_overflow, multiplied by every API container and
+    # Celery worker, must stay below Postgres max_connections (100 by default).
+    database_pool_size: int = 5
+    database_max_overflow: int = 10
+
     log_level: str = "INFO"
     # None means "decide from the environment": human-readable locally, JSON in
     # anything deployed. Explicit true/false overrides that, which is occasionally

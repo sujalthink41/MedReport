@@ -16,6 +16,7 @@ from contextlib import asynccontextmanager
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.adapters.db.session import create_engine, create_session_factory
 from app.api.error_handlers import register_error_handlers
 from app.api.middleware import AccessLogMiddleware, RequestContextMiddleware
 from app.api.v1.routers import health
@@ -26,16 +27,29 @@ log = get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Startup and shutdown.
 
-    Connection pools, the Redis client and the LLM client get created here from
-    CP5 onward — once per process, not once per request.
+    The engine owns the connection pool, so it is created ONCE per process here -
+    not per request. An engine per request means a TCP connection per request, which
+    ruins latency and exhausts Postgres' connection limit under load.
+
+    Disposing on shutdown matters too: without it, a rolling deploy leaves the old
+    container's connections open until Postgres times them out, and for a few
+    minutes you are over your connection budget.
     """
     settings = get_settings()
     log.info("app_starting", environment=settings.environment.value)
-    yield
-    log.info("app_stopped")
+
+    engine = create_engine(settings)
+    app.state.engine = engine
+    app.state.session_factory = create_session_factory(engine)
+
+    try:
+        yield
+    finally:
+        await engine.dispose()
+        log.info("app_stopped")
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
