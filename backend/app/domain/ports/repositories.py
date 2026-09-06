@@ -80,12 +80,25 @@ class ObservationRepository(Protocol):
         """
         ...
 
-    async def add_many(self, observations: list[Observation]) -> None:
-        """Bulk insert. A 25-page report is hundreds of rows.
+    async def replace_for_page(
+        self, report_id: ReportId, page: int, observations: list[Observation]
+    ) -> None:
+        """Set the observations for one page, replacing whatever was there.
 
-        Implementations must be idempotent on ``(report_id, page, canonical_test_id)``
-        so that re-running a pipeline node after a failure updates rows rather than
-        duplicating them. Retry is only safe because of this.
+        This method started life as ``add_many`` with an upsert behind it, and that
+        was wrong. The unique constraint is
+        ``(report_id, page, canonical_test_id)`` — and in Postgres, NULLs are
+        *distinct* in a unique constraint. We rely on that so a page can hold several
+        tests we could not map. But it also means an upsert never matches an unmapped
+        row, so re-running extraction would silently duplicate every one of them.
+
+        "Replace this page" is idempotent by construction instead of by constraint,
+        so it holds for mapped and unmapped rows alike. It is also the right shape
+        for the pipeline, which extracts page by page in parallel: re-running page 7
+        must not disturb pages 1-6.
+
+        Worth remembering as a general lesson — an interface that needs a subtle
+        database behaviour to be correct is usually the wrong interface.
         """
         ...
 
