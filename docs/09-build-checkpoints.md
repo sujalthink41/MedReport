@@ -303,7 +303,7 @@ as a boring, repeatable script.
 |---|---|---|
 | CP1 | Repo skeleton and tooling | ✅ |
 | CP2 | Config, logging, errors | ✅ |
-| CP3 | FastAPI skeleton and error mapping | ☐ |
+| CP3 | FastAPI skeleton and error mapping | ✅ |
 | CP4 | Domain models and ports | ☐ |
 | CP5 | Database and migrations | ☐ |
 | CP6 | Repositories and Unit of Work | ☐ |

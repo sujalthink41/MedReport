@@ -7,7 +7,6 @@ more than it looks:
 * nothing runs at import time, so importing ``app.main`` has no side effects
 * the wiring of concrete implementations happens in exactly one visible place
 
-CP2 adds middleware, structured logging and the error handlers.
 CP7 mounts auth, CP8 authorization. CP9 onward mount feature routers here.
 """
 
@@ -17,8 +16,13 @@ from contextlib import asynccontextmanager
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.error_handlers import register_error_handlers
+from app.api.middleware import AccessLogMiddleware, RequestContextMiddleware
 from app.api.v1.routers import health
 from app.core.config import Settings, get_settings
+from app.core.logging import configure_logging, get_logger
+
+log = get_logger(__name__)
 
 
 @asynccontextmanager
@@ -28,11 +32,15 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     Connection pools, the Redis client and the LLM client get created here from
     CP5 onward — once per process, not once per request.
     """
+    settings = get_settings()
+    log.info("app_starting", environment=settings.environment.value)
     yield
+    log.info("app_stopped")
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
+    configure_logging(settings)
 
     app = FastAPI(
         title=settings.app_name,
@@ -45,6 +53,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         openapi_url=None if settings.is_production else "/openapi.json",
     )
 
+    # ---- Middleware -------------------------------------------------------
+    # Ordering is the part people get wrong. Starlette applies the LAST-ADDED
+    # middleware OUTERMOST, so this list runs bottom-up on the way in:
+    #
+    #     RequestContextMiddleware   <- outermost: every request gets an id first
+    #       AccessLogMiddleware      <- so its log lines already carry that id
+    #         CORSMiddleware
+    #           routes
+    #
+    # Get this backwards and your access log has no request_id on it, which is
+    # exactly when you need one.
     if settings.cors_origins:
         app.add_middleware(
             CORSMiddleware,
@@ -53,6 +72,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+    app.add_middleware(AccessLogMiddleware)
+    app.add_middleware(RequestContextMiddleware)
+
+    register_error_handlers(app)
 
     v1 = APIRouter(prefix=settings.api_v1_prefix)
     v1.include_router(health.router)
