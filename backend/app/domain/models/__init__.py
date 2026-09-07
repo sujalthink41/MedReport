@@ -28,6 +28,7 @@ from app.domain.models.measurement import (
 from app.domain.models.observation import Observation
 from app.domain.models.profile import Profile
 from app.domain.models.report import Report
+from app.domain.models.user import User
 
 __all__ = [
     "DIMENSIONLESS",
@@ -47,5 +48,6 @@ __all__ = [
     "ReportStatus",
     "Sex",
     "Unit",
+    "User",
     "UserId",
 ]

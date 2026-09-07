@@ -107,6 +107,20 @@ class PermissionDeniedError(DomainError):
     code: ClassVar[str] = "permission_denied"
 
 
+class InvalidTokenError(DomainError):
+    """A sign-in or session token was not acceptable.
+
+    A DomainError, not an InfrastructureError: a bad token is the caller's problem,
+    so it maps to 4xx and must never be retried. Retrying an expired token just
+    burns a round trip to reach the same answer.
+
+    Deliberately says nothing about *why* it failed. "Expired" versus "bad
+    signature" is free reconnaissance for anyone probing the endpoint.
+    """
+
+    code: ClassVar[str] = "invalid_token"
+
+
 # ---------------------------------------------------------------------------
 # Infrastructure errors — something we depend on failed.
 # Map to 5xx. Retrying is usually the right move.

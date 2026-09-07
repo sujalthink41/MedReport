@@ -50,9 +50,6 @@ def profile_to_domain(row: ProfileRow) -> Profile:
         owner_id=UserId(row.owner_id),
         display_name=row.display_name,
         date_of_birth=row.date_of_birth,
-        # Strings come back from the database and become enums here. If a row holds
-        # a value the enum does not know, this raises at the boundary rather than
-        # letting an unknown string wander into business logic.
         sex=Sex(row.sex),
         relationship=Relationship(row.relationship),
         created_at=row.created_at,
