@@ -90,6 +90,9 @@ ignore = [
 # backslash continuations, which is fragile for no reader benefit - the prompt is
 # read as rendered text, never as source lines.
 "app/adapters/llm/prompts.py" = ["E501"]
+# En dashes are intentional: Indian lab reports print ranges with them, and the
+# parser has to match what is actually on the page rather than what is tidy.
+"app/domain/services/parsing.py" = ["RUF001", "RUF002", "RUF003"]
 "tests/**" = ["S", "ARG", "PLR2004"]
 # The eval harness prints its scorecard - that IS its output.
 "tests/evals/**" = ["S", "ARG", "PLR2004", "T201"]
