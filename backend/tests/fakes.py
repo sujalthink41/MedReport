@@ -27,6 +27,33 @@ from app.domain.models import (
     ReportId,
     UserId,
 )
+from app.domain.models.user import User
+
+
+class InMemoryUserRepository:
+    def __init__(self) -> None:
+        self.items: dict[UserId, User] = {}
+
+    async def get(self, user_id: UserId) -> User | None:
+        return self.items.get(user_id)
+
+    async def find_by_google_sub(self, google_sub: str) -> User | None:
+        for user in self.items.values():
+            if user.google_sub == google_sub:
+                return user
+        return None
+
+    async def add(self, user: User) -> None:
+        # Behave like a primary key. Silently overwriting would let a test pass
+        # against a fake while the real repository raised IntegrityError - exactly
+        # the fake/real divergence the contract suite exists to prevent.
+        if user.id in self.items:
+            raise ValueError(f"duplicate user id {user.id}")
+        self.items[user.id] = user
+
+    async def update(self, user: User) -> None:
+        if user.id in self.items:
+            self.items[user.id] = user
 
 
 class InMemoryProfileRepository:
@@ -144,6 +171,7 @@ class InMemoryUnitOfWork:
     """
 
     def __init__(self) -> None:
+        self.users = InMemoryUserRepository()
         self.profiles = InMemoryProfileRepository()
         self.reports = InMemoryReportRepository()
         self.observations = InMemoryObservationRepository()

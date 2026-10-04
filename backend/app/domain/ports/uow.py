@@ -23,6 +23,7 @@ from app.domain.ports.repositories import (
     ObservationRepository,
     ProfileRepository,
     ReportRepository,
+    UserRepository,
 )
 
 
@@ -42,6 +43,7 @@ class UnitOfWork(Protocol):
     the automatic one.
     """
 
+    users: UserRepository
     profiles: ProfileRepository
     reports: ReportRepository
     observations: ObservationRepository

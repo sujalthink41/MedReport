@@ -16,7 +16,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.db import mappers
-from app.adapters.db.models import ObservationRow, ProfileRow, ReportRow
+from app.adapters.db.models import ObservationRow, ProfileRow, ReportRow, UserRow
 from app.domain.models import (
     Observation,
     ObservationId,
@@ -26,6 +26,34 @@ from app.domain.models import (
     ReportId,
     UserId,
 )
+from app.domain.models.user import User
+
+
+class SqlUserRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get(self, user_id: UserId) -> User | None:
+        row = await self._session.get(UserRow, user_id)
+        return mappers.user_to_domain(row) if row else None
+
+    async def find_by_google_sub(self, google_sub: str) -> User | None:
+        result = await self._session.execute(
+            select(UserRow).where(UserRow.google_sub == google_sub)
+        )
+        row = result.scalars().first()
+        return mappers.user_to_domain(row) if row else None
+
+    async def add(self, user: User) -> None:
+        self._session.add(mappers.user_to_row(user))
+        await self._session.flush()
+
+    async def update(self, user: User) -> None:
+        row = await self._session.get(UserRow, user.id)
+        if row is None:
+            return
+        mappers.apply_user(row, user)
+        await self._session.flush()
 
 
 class SqlProfileRepository:

@@ -9,6 +9,7 @@ from app.adapters.db.repositories import (
     SqlObservationRepository,
     SqlProfileRepository,
     SqlReportRepository,
+    SqlUserRepository,
 )
 
 
@@ -26,6 +27,7 @@ class SqlUnitOfWork:
 
     async def __aenter__(self) -> Self:
         self._session = self._session_factory()
+        self.users = SqlUserRepository(self._session)
         self.profiles = SqlProfileRepository(self._session)
         self.reports = SqlReportRepository(self._session)
         self.observations = SqlObservationRepository(self._session)
@@ -72,6 +74,7 @@ class SessionUnitOfWork:
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
+        self.users = SqlUserRepository(session)
         self.profiles = SqlProfileRepository(session)
         self.reports = SqlReportRepository(session)
         self.observations = SqlObservationRepository(session)

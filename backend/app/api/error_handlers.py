@@ -25,6 +25,7 @@ from app.domain.errors import (
     FileTooLargeError,
     InfrastructureError,
     InvalidInputError,
+    InvalidTokenError,
     LLMUnavailableError,
     MedReportError,
     NotFoundError,
@@ -42,6 +43,9 @@ log = get_logger(__name__)
 # here. That is Open/Closed applied to a lookup table.
 STATUS_MAP: dict[type[MedReportError], int] = {
     NotFoundError: 404,
+    # 401, not 403: the caller has not proved who they are. 403 would mean
+    # 'we know who you are and you still may not'.
+    InvalidTokenError: 401,
     PermissionDeniedError: 403,
     ConflictError: 409,
     UnsupportedFileTypeError: 415,
@@ -64,6 +68,7 @@ PUBLIC_MESSAGES: dict[str, str] = {
     "report_not_found": "That report could not be found.",
     "not_found": "That resource could not be found.",
     "permission_denied": "You do not have access to this.",
+    "invalid_token": "Your session has expired. Please sign in again.",
     "duplicate_report": "This report has already been uploaded.",
     "unsupported_file_type": "That file type is not supported. Upload a PDF or an image.",
     "file_too_large": "That file is too large.",

@@ -18,7 +18,7 @@ and a domain object never reaches SQLAlchemy except through these functions.
 from decimal import Decimal
 from uuid import UUID
 
-from app.adapters.db.models import ObservationRow, ProfileRow, ReportRow
+from app.adapters.db.models import ObservationRow, ProfileRow, ReportRow, UserRow
 from app.domain.models import (
     Band,
     CanonicalValue,
@@ -38,6 +38,41 @@ from app.domain.models import (
     UserId,
 )
 from app.domain.models.identifiers import CanonicalTestId
+from app.domain.models.user import User
+
+# ---------------------------------------------------------------------------
+# User
+# ---------------------------------------------------------------------------
+
+
+def user_to_domain(row: UserRow) -> User:
+    return User(
+        id=UserId(row.id),
+        google_sub=row.google_sub,
+        email=row.email,
+        name=row.name,
+        created_at=row.created_at,
+        last_login_at=row.last_login_at,
+    )
+
+
+def user_to_row(user: User) -> UserRow:
+    return UserRow(
+        id=user.id,
+        google_sub=user.google_sub,
+        email=user.email,
+        name=user.name,
+        created_at=user.created_at,
+        last_login_at=user.last_login_at,
+    )
+
+
+def apply_user(row: UserRow, user: User) -> None:
+    # google_sub is never copied: it is the identity and must not drift.
+    row.email = user.email
+    row.name = user.name
+    row.last_login_at = user.last_login_at
+
 
 # ---------------------------------------------------------------------------
 # Profile

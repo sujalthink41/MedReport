@@ -19,6 +19,23 @@ from app.domain.models.identifiers import ObservationId, ProfileId, ReportId, Us
 from app.domain.models.observation import Observation
 from app.domain.models.profile import Profile
 from app.domain.models.report import Report
+from app.domain.models.user import User
+
+
+class UserRepository(Protocol):
+    async def get(self, user_id: UserId) -> User | None: ...
+
+    async def find_by_google_sub(self, google_sub: str) -> User | None:
+        """The login lookup.
+
+        By sub, never by email. Someone changes their email at Google; keying on it
+        would create a second account and orphan their entire medical history.
+        """
+        ...
+
+    async def add(self, user: User) -> None: ...
+
+    async def update(self, user: User) -> None: ...
 
 
 class ProfileRepository(Protocol):

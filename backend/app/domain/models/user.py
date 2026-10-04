@@ -34,6 +34,21 @@ class User:
         if self.created_at.tzinfo is None:
             raise InvalidInputError(field="created_at", reason="must be timezone-aware")
 
+    def with_google_profile(self, *, email: str, name: str | None) -> "User":
+        """Follow a change Google reported, keeping the same identity.
+
+        People change their email address and display name. Because identity is
+        ``google_sub``, we update in place rather than creating a second account.
+        """
+        return User(
+            id=self.id,
+            google_sub=self.google_sub,
+            email=email,
+            name=name,
+            created_at=self.created_at,
+            last_login_at=self.last_login_at,
+        )
+
     def logged_in_at(self, when: datetime) -> "User":
         """Same user, new login time.
 
