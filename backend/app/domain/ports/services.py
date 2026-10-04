@@ -19,6 +19,15 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
+from app.domain.errors import StorageObjectNotFoundError
+
+__all__ = [
+    "Clock",
+    "FileStorage",
+    "IdGenerator",
+    "StorageObjectNotFoundError",
+]
+
 
 class Clock(Protocol):
     """The current time, as a dependency.
@@ -60,7 +69,14 @@ class FileStorage(Protocol):
 
     async def put(self, key: str, data: bytes, content_type: str) -> None: ...
 
-    async def get(self, key: str) -> bytes: ...
+    async def get(self, key: str) -> bytes:
+        """Raises StorageObjectNotFoundError if the key is absent.
+
+        Part of the contract, so every implementation behaves the same. Without
+        this stated, one adapter would raise FileNotFoundError and another would
+        return None, and the "swappable storage" claim would be false.
+        """
+        ...
 
     async def delete(self, key: str) -> None: ...
 

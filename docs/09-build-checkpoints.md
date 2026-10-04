@@ -310,7 +310,7 @@ as a boring, repeatable script.
 | CP7 | Authentication — Google OAuth | ✅ |
 | CP8 | Authorization — RBAC and policy layer | ✅ |
 | CP9 | Profiles and sharing (reference slice) | ✅ |
-| CP10 | Storage port, two adapters | ☐ |
+| CP10 | Storage port, two adapters | ✅ |
 | CP11 | Upload endpoint | ☐ |
 | CP12 | Celery and async bridge | ☐ |
 | CP13 | Clinical dictionary | ☐ |

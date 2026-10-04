@@ -26,6 +26,9 @@ tests/golden/reports/
 *.heic
 !docs/**/*.png
 
+# uploaded reports in local-storage mode - health data, never committed
+.storage/
+
 # local
 .DS_Store
 *.db

@@ -136,6 +136,18 @@ class StorageUnavailableError(InfrastructureError):
     code: ClassVar[str] = "storage_unavailable"
 
 
+class StorageObjectNotFoundError(InfrastructureError):
+    """The stored object is gone.
+
+    Infrastructure rather than domain: the caller asked for a key we gave them, so
+    its absence means our storage lost it - a data-integrity incident, not a bad
+    request. Not retryable, because retrying will not bring it back.
+    """
+
+    code: ClassVar[str] = "storage_object_not_found"
+    retryable: ClassVar[bool] = False
+
+
 class DatabaseUnavailableError(InfrastructureError):
     code: ClassVar[str] = "database_unavailable"
 

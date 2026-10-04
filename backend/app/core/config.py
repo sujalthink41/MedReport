@@ -9,6 +9,7 @@ CP2 expands this with database, Redis, storage and model settings.
 
 from enum import StrEnum
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -44,6 +45,14 @@ class Settings(BaseSettings):
     # Celery worker, must stay below Postgres max_connections (100 by default).
     database_pool_size: int = 5
     database_max_overflow: int = 10
+
+    storage_backend: Literal["local", "r2"] = "local"
+    storage_local_root: str = "./.storage"
+    r2_account_id: str = ""
+    r2_access_key_id: str = ""
+    r2_secret_access_key: str = ""
+    r2_bucket: str = ""
+    signed_url_ttl_seconds: int = 300
 
     google_client_id: str = ""
     jwt_secret: str = "dev-only-insecure-secret-change-me-32chars"  # noqa: S105

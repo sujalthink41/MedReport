@@ -30,6 +30,7 @@ from app.domain.errors import InvalidTokenError, NotFoundError
 from app.domain.models.authz import Permission
 from app.domain.models.identifiers import ProfileId
 from app.domain.models.user import User
+from app.domain.ports.services import FileStorage
 from app.domain.services.policy import AuthorizationContext, require
 
 # auto_error=False so a missing header reaches our handler as InvalidTokenError and
@@ -75,6 +76,20 @@ def get_uow(session: SessionDep) -> SessionUnitOfWork:
 
 
 UowDep = Annotated[SessionUnitOfWork, Depends(get_uow)]
+
+
+def get_storage(request: Request) -> FileStorage:
+    """The storage built once at startup. See ``build_storage`` in main.py.
+
+    THE plug/unplug seam. One config value decides which adapter the whole
+    application uses, and nothing downstream - no use case, no router, no test -
+    knows which it got.
+    """
+    storage: FileStorage = request.app.state.storage
+    return storage
+
+
+StorageDep = Annotated[FileStorage, Depends(get_storage)]
 
 
 def get_token_service(settings: SettingsDep) -> JwtTokenService:

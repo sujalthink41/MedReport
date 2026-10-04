@@ -22,8 +22,36 @@ from app.api.middleware import AccessLogMiddleware, RequestContextMiddleware
 from app.api.v1.routers import auth, health, profiles
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging, get_logger
+from app.domain.ports.services import FileStorage
 
 log = get_logger(__name__)
+
+
+def build_storage(settings: Settings) -> FileStorage:
+    """Choose the storage adapter. The entire plug/unplug mechanism, in one place.
+
+    Count the files that change when you swap R2 for local disk, or for S3, or for
+    anything else: this one. Nothing in ``application/`` or ``domain/`` names a
+    provider, so nothing downstream can notice.
+    """
+    if settings.storage_backend == "r2":
+        from app.adapters.storage.r2 import R2Storage
+
+        return R2Storage(
+            account_id=settings.r2_account_id,
+            access_key_id=settings.r2_access_key_id,
+            secret_access_key=settings.r2_secret_access_key,
+            bucket=settings.r2_bucket,
+        )
+
+    from pathlib import Path
+
+    from app.adapters.storage.local import LocalDiskStorage
+
+    return LocalDiskStorage(
+        root=Path(settings.storage_local_root),
+        signing_secret=settings.jwt_secret,
+    )
 
 
 @asynccontextmanager
@@ -44,6 +72,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     engine = create_engine(settings)
     app.state.engine = engine
     app.state.session_factory = create_session_factory(engine)
+    app.state.storage = build_storage(settings)
+    log.info("storage_ready", backend=settings.storage_backend)
 
     try:
         yield
