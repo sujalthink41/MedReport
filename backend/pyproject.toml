@@ -20,6 +20,8 @@ dependencies = [
     "pyjwt>=2.15.1",
     "boto3>=1.43.108",
     "python-multipart>=0.0.32",
+    "redis>=8.1.0",
+    "celery>=5.6.3",
 ]
 
 [dependency-groups]
@@ -115,8 +117,15 @@ ignore_missing_imports = true
 # Libraries that ship no type information. Named explicitly rather than silencing
 # missing imports globally, so a typo in one of OUR module paths still fails.
 [[tool.mypy.overrides]]
-module = ["boto3.*", "botocore.*", "google.*"]
+module = ["boto3.*", "botocore.*", "google.*", "celery.*"]
 ignore_missing_imports = true
+
+# Celery's @task decorator is untyped, so mypy treats every task as untyped too.
+# Scoped to this one module rather than silenced globally - the task BODIES are
+# still fully checked, only the decorator is exempt.
+[[tool.mypy.overrides]]
+module = ["app.adapters.queue.tasks"]
+disallow_untyped_decorators = false
 
 
 # ----------------------------------------------------------------------------

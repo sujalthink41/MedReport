@@ -75,3 +75,9 @@ async def session_scope(
             raise
         else:
             await session.commit()
+            # AFTER the commit, never before. Anything buffered during the request
+            # is only dispatched once the rows it refers to are visible to other
+            # processes - see TransactionalTaskQueue.
+            from app.adapters.queue.celery_queue import dispatch_pending
+
+            await dispatch_pending(session)

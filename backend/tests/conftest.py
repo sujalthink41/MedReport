@@ -40,7 +40,7 @@ class FakeSession:
 
 @pytest.fixture
 def settings() -> Settings:
-    return Settings(environment=Environment.LOCAL, debug=True)
+    return Settings(environment=Environment.LOCAL, debug=True, queue_backend="null")
 
 
 @pytest.fixture

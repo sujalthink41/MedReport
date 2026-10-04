@@ -93,10 +93,16 @@ def get_storage(request: Request) -> FileStorage:
 StorageDep = Annotated[FileStorage, Depends(get_storage)]
 
 
-def get_queue(request: Request) -> TaskQueue:
-    """The queue built once at startup. Replaced with Celery in CP12."""
-    queue: TaskQueue = request.app.state.queue
-    return queue
+def get_queue(request: Request, session: SessionDep) -> TaskQueue:
+    """A queue that buffers until the request's transaction commits.
+
+    Wrapping the real dispatcher rather than returning it directly closes the
+    dual-write race: Redis is faster than a Postgres commit, so a worker really
+    can read a row that is not there yet. See TransactionalTaskQueue.
+    """
+    from app.adapters.queue.celery_queue import TransactionalTaskQueue
+
+    return TransactionalTaskQueue(session, request.app.state.queue)
 
 
 QueueDep = Annotated[TaskQueue, Depends(get_queue)]

@@ -312,7 +312,7 @@ as a boring, repeatable script.
 | CP9 | Profiles and sharing (reference slice) | ✅ |
 | CP10 | Storage port, two adapters | ✅ |
 | CP11 | Upload endpoint | ✅ |
-| CP12 | Celery and async bridge | ☐ |
+| CP12 | Celery and async bridge | ✅ |
 | CP13 | Clinical dictionary | ☐ |
 | CP14 | Normalization service | ☐ |
 | CP15 | Classification engine | ☐ |

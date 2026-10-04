@@ -46,6 +46,12 @@ class Settings(BaseSettings):
     database_pool_size: int = 5
     database_max_overflow: int = 10
 
+    redis_url: str = "redis://localhost:6380/0"
+    # "null" drops tasks and logs loudly - used in tests and when running
+    # the API without a worker.
+    queue_backend: Literal["celery", "null"] = "celery"
+    task_soft_time_limit_seconds: int = 15 * 60
+
     storage_backend: Literal["local", "r2"] = "local"
     storage_local_root: str = "./.storage"
     r2_account_id: str = ""

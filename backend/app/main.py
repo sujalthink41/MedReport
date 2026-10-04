@@ -22,9 +22,28 @@ from app.api.middleware import AccessLogMiddleware, RequestContextMiddleware
 from app.api.v1.routers import auth, health, profiles, reports
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging, get_logger
+from app.domain.ports.queue import TaskQueue
 from app.domain.ports.services import FileStorage
 
 log = get_logger(__name__)
+
+
+def build_queue(settings: Settings) -> TaskQueue:
+    """Choose the dispatcher.
+
+    Imports the Celery *app* only - never the tasks module. The API process must
+    not drag LangGraph, the LLM client and pypdfium2 into every web container, so
+    tasks are sent by name.
+    """
+    if settings.queue_backend == "null":
+        from app.adapters.queue.null import NullTaskQueue
+
+        return NullTaskQueue()
+
+    from app.adapters.queue.celery_app import create_celery
+    from app.adapters.queue.celery_queue import CeleryTaskQueue
+
+    return CeleryTaskQueue(create_celery(settings))
 
 
 def build_storage(settings: Settings) -> FileStorage:
@@ -73,9 +92,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.engine = engine
     app.state.session_factory = create_session_factory(engine)
     app.state.storage = build_storage(settings)
-    from app.adapters.queue.null import NullTaskQueue
-
-    app.state.queue = NullTaskQueue()  # replaced with Celery in CP12
+    app.state.queue = build_queue(settings)
     log.info("storage_ready", backend=settings.storage_backend)
 
     try:

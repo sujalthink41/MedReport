@@ -16,7 +16,7 @@ CP5 and CP12 give ``/ready`` real dependency checks.
 from fastapi import APIRouter, Response
 from sqlalchemy import text
 
-from app.api.deps import SessionDep
+from app.api.deps import SessionDep, SettingsDep
 from app.api.v1.schemas.health import HealthResponse, ReadyResponse
 from app.core.config import get_settings
 from app.core.logging import get_logger
@@ -37,7 +37,7 @@ async def health() -> HealthResponse:
 
 
 @router.get("/ready", response_model=ReadyResponse)
-async def ready(session: SessionDep, response: Response) -> ReadyResponse:
+async def ready(session: SessionDep, settings: SettingsDep, response: Response) -> ReadyResponse:
     """Can this instance actually serve traffic?
 
     A real query, not just "is the pool object present". A pool can hold connections
@@ -56,7 +56,30 @@ async def ready(session: SessionDep, response: Response) -> ReadyResponse:
         log.exception("readiness_check_failed", dependency="database")
         checks["database"] = False
 
+    # Redis is the broker. Without it an upload still succeeds and still stores
+    # the file, but nothing ever processes it - so the instance is genuinely not
+    # ready to serve, and should be pulled from the load balancer.
+    checks["queue"] = await _queue_reachable(settings)
+
     healthy = all(checks.values())
     if not healthy:
         response.status_code = 503
     return ReadyResponse(status="ready" if healthy else "degraded", checks=checks)
+
+
+async def _queue_reachable(settings: object) -> bool:
+    import redis.asyncio as redis
+
+    url = getattr(settings, "redis_url", "")
+    if getattr(settings, "queue_backend", "celery") == "null":
+        return True
+    client = redis.from_url(url)
+    try:
+        await client.ping()
+    except Exception:
+        log.exception("readiness_check_failed", dependency="queue")
+        return False
+    else:
+        return True
+    finally:
+        await client.aclose()
