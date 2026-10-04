@@ -257,3 +257,18 @@ class InMemoryUnitOfWork:
 
     async def rollback(self) -> None:
         self.rolled_back = True
+
+
+class RecordingTaskQueue:
+    """Records dispatched tasks instead of running them.
+
+    Lets a test assert both that work WAS queued and - just as importantly - that
+    it was not queued twice. Re-enqueuing a duplicate upload would charge us for
+    the same vision calls again.
+    """
+
+    def __init__(self) -> None:
+        self.dispatched: list[tuple[str, dict[str, str]]] = []
+
+    async def enqueue(self, task: str, **kwargs: str) -> None:
+        self.dispatched.append((task, kwargs))

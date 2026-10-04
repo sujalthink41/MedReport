@@ -30,6 +30,7 @@ from app.domain.errors import InvalidTokenError, NotFoundError
 from app.domain.models.authz import Permission
 from app.domain.models.identifiers import ProfileId
 from app.domain.models.user import User
+from app.domain.ports.queue import TaskQueue
 from app.domain.ports.services import FileStorage
 from app.domain.services.policy import AuthorizationContext, require
 
@@ -90,6 +91,15 @@ def get_storage(request: Request) -> FileStorage:
 
 
 StorageDep = Annotated[FileStorage, Depends(get_storage)]
+
+
+def get_queue(request: Request) -> TaskQueue:
+    """The queue built once at startup. Replaced with Celery in CP12."""
+    queue: TaskQueue = request.app.state.queue
+    return queue
+
+
+QueueDep = Annotated[TaskQueue, Depends(get_queue)]
 
 
 def get_token_service(settings: SettingsDep) -> JwtTokenService:

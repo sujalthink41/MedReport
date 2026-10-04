@@ -19,6 +19,7 @@ dependencies = [
     "google-auth>=2.59.1",
     "pyjwt>=2.15.1",
     "boto3>=1.43.108",
+    "python-multipart>=0.0.32",
 ]
 
 [dependency-groups]

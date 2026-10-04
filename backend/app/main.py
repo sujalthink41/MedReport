@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.adapters.db.session import create_engine, create_session_factory
 from app.api.error_handlers import register_error_handlers
 from app.api.middleware import AccessLogMiddleware, RequestContextMiddleware
-from app.api.v1.routers import auth, health, profiles
+from app.api.v1.routers import auth, health, profiles, reports
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging, get_logger
 from app.domain.ports.services import FileStorage
@@ -73,6 +73,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.engine = engine
     app.state.session_factory = create_session_factory(engine)
     app.state.storage = build_storage(settings)
+    from app.adapters.queue.null import NullTaskQueue
+
+    app.state.queue = NullTaskQueue()  # replaced with Celery in CP12
     log.info("storage_ready", backend=settings.storage_backend)
 
     try:
@@ -125,6 +128,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(health.router)
     v1.include_router(auth.router)
     v1.include_router(profiles.router)
+    v1.include_router(reports.router)
     app.include_router(v1)
 
     return app

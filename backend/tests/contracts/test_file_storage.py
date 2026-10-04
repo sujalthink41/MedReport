@@ -96,7 +96,7 @@ class TestLocalDiskStorage(FileStorageContract):
     def storage(self, tmp_path: Path):  # type: ignore[no-untyped-def]
         from app.adapters.storage.local import LocalDiskStorage
 
-        return LocalDiskStorage(root=tmp_path)
+        return LocalDiskStorage(root=tmp_path, signing_secret="test-secret-32-chars-minimum-here")
 
     async def test_keys_cannot_escape_the_root(self, storage) -> None:  # type: ignore[no-untyped-def]
         # Local-only: path traversal has no meaning for an object store. Keys come

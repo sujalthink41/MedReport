@@ -18,7 +18,13 @@ from app.domain.ports.services import StorageObjectNotFoundError
 
 
 class LocalDiskStorage:
-    def __init__(self, root: Path, signing_secret: str = "local-dev") -> None:
+    def __init__(self, root: Path, *, signing_secret: str) -> None:
+        """``signing_secret`` is required, with no default.
+
+        A default would be a hardcoded key in source, which is the same mistake as
+        a default JWT secret: anyone reading the repository could forge a valid
+        signed URL to a medical document.
+        """
         self._root = root
         self._signing_secret = signing_secret
         self._root.mkdir(parents=True, exist_ok=True)
@@ -32,7 +38,10 @@ class LocalDiskStorage:
             raise StorageUnavailableError(reason="invalid_key")
         return candidate
 
-    async def put(self, key: str, data: bytes, content_type: str) -> None:
+    async def put(self, key: str, data: bytes, content_type: str) -> None:  # noqa: ARG002
+        # content_type is part of the port contract - R2 stores it as object
+        # metadata. Local disk has nowhere to put it, and `get` returns bytes
+        # only, so nothing downstream can tell the difference.
         path = self._path(key)
 
         def _write() -> None:
