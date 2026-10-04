@@ -22,6 +22,14 @@ from app.core.logging import (
     redact_sensitive,
 )
 
+# Deployed environments refuse the development JWT secret (see Settings), so tests
+# that construct one must supply a real-looking value.
+PROD_SECRET = "x" * 48
+
+
+def deployed(environment: Environment = Environment.PRODUCTION) -> Settings:
+    return Settings(environment=environment, jwt_secret=PROD_SECRET)
+
 
 def _redact(**fields: object) -> dict[str, object]:
     return dict(redact_sensitive(None, "info", dict(fields)))  # type: ignore[arg-type]
@@ -99,7 +107,7 @@ class TestLogOutput:
         return stream
 
     def test_json_output_is_machine_readable(self) -> None:
-        stream = self._capture(Settings(environment=Environment.PRODUCTION))
+        stream = self._capture(deployed())
 
         structlog.get_logger("test").info("report_queued", report_id="r-1")
 
@@ -110,7 +118,7 @@ class TestLogOutput:
         assert "timestamp" in record
 
     def test_redaction_applies_to_real_output_not_just_the_processor(self) -> None:
-        stream = self._capture(Settings(environment=Environment.PRODUCTION))
+        stream = self._capture(deployed())
 
         structlog.get_logger("test").info("observation", test="hba1c", value=6.1)
 
@@ -119,7 +127,7 @@ class TestLogOutput:
         assert "6.1" not in stream.getvalue()
 
     def test_bound_context_reaches_every_line(self) -> None:
-        stream = self._capture(Settings(environment=Environment.PRODUCTION))
+        stream = self._capture(deployed())
         clear_context()
         bind_context(request_id="req-42")
 
@@ -131,7 +139,7 @@ class TestLogOutput:
         clear_context()
 
     def test_context_can_be_cleared_between_requests(self) -> None:
-        stream = self._capture(Settings(environment=Environment.PRODUCTION))
+        stream = self._capture(deployed())
         bind_context(request_id="req-1")
         clear_context()
 
@@ -147,8 +155,8 @@ class TestLogFormatSelection:
         assert Settings(environment=Environment.LOCAL).use_json_logs is False
 
     def test_deployed_environments_use_json(self) -> None:
-        assert Settings(environment=Environment.PRODUCTION).use_json_logs is True
-        assert Settings(environment=Environment.STAGING).use_json_logs is True
+        assert deployed().use_json_logs is True
+        assert deployed(Environment.STAGING).use_json_logs is True
 
     def test_explicit_override_wins(self) -> None:
         settings = Settings(environment=Environment.LOCAL, log_json=True)
