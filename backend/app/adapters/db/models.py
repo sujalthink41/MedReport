@@ -389,3 +389,40 @@ class CriticalValueRow(Base, TimestampMixin):
         CheckConstraint("comparator in ('lt','gt')", name="comparator_known"),
         Index("ix_critical_values_test", "canonical_test_id", "status"),
     )
+
+
+class UnitConversionRow(Base, TimestampMixin):
+    """A conversion factor, learned rather than typed in.
+
+    Derived from two reports' printed reference ranges (see domain/services/units),
+    optionally corroborated by a model proposal, and overridable by a reviewer.
+
+    ``agreement`` is the quality signal: how closely the low and high ratios agreed
+    when the factor was derived. A factor from ranges that agreed to 0.2% is far
+    more trustworthy than one that scraped past the tolerance, and a better one
+    arriving later should win.
+    """
+
+    __tablename__ = "unit_conversions"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    canonical_test_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("canonical_tests.id", ondelete="CASCADE"), nullable=False
+    )
+    from_unit: Mapped[str] = mapped_column(String(40), nullable=False)
+    to_unit: Mapped[str] = mapped_column(String(40), nullable=False)
+    factor: Mapped[Decimal] = mapped_column(Numeric(30, 12), nullable=False)
+
+    agreement: Mapped[Decimal | None] = mapped_column(Numeric(10, 6))
+    derived_from: Mapped[str] = mapped_column(String(20), nullable=False, default="ranges")
+    """ranges | model_confirmed | reviewer"""
+
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="proposed")
+
+    __table_args__ = (
+        # Per test, because the same two units convert differently for different
+        # analytes - mg/dL to mmol/L depends on molecular weight.
+        UniqueConstraint(
+            "canonical_test_id", "from_unit", "to_unit", name="uq_unit_conversions_test_units"
+        ),
+    )

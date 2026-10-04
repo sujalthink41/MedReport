@@ -12,6 +12,7 @@ from app.adapters.db.models import (
     CanonicalTestRow,
     CriticalValueRow,
     TestAliasRow,
+    UnitConversionRow,
     UnmappedNameRow,
 )
 from app.core.logging import get_logger
@@ -24,6 +25,8 @@ from app.domain.models.clinical import (
     UnmappedName,
 )
 from app.domain.models.identifiers import CanonicalTestId
+from app.domain.models.measurement import Unit
+from app.domain.services.units import ConversionFactor
 
 log = get_logger(__name__)
 
@@ -183,6 +186,78 @@ class SqlDictionaryRepository:
             for row in result.scalars()
         ]
 
+    async def find_conversion(
+        self, canonical_test_id: CanonicalTestId, from_unit: str, to_unit: str
+    ) -> ConversionFactor | None:
+        """A factor we already learned, in either direction.
+
+        Checked both ways round so learning mg/dL -> mmol/L once also answers
+        mmol/L -> mg/dL. Storing both rows would be two facts that could disagree.
+        """
+        result = await self._session.execute(
+            select(UnitConversionRow).where(
+                UnitConversionRow.canonical_test_id == canonical_test_id,
+                UnitConversionRow.status != EntryStatus.REJECTED.value,
+            )
+        )
+        for row in result.scalars():
+            if row.from_unit == from_unit and row.to_unit == to_unit:
+                return _to_factor(row)
+            if row.from_unit == to_unit and row.to_unit == from_unit:
+                return _to_factor(row).inverse()
+        return None
+
+    async def learn_conversion(
+        self,
+        canonical_test_id: CanonicalTestId,
+        factor: ConversionFactor,
+        *,
+        derived_from: str = "ranges",
+        at: datetime | None = None,
+    ) -> None:
+        """Store a derived factor, keeping the better of the two if one exists.
+
+        Reports arrive continuously, so the same pair of units gets derived again
+        and again from different documents. Keeping the one whose bounds agreed
+        most closely means the estimate improves over time instead of being frozen
+        at whatever the first pair of reports happened to give.
+
+        A reviewer entry is never overwritten by a derivation.
+        """
+        values = {
+            "id": uuid4(),
+            "canonical_test_id": canonical_test_id,
+            "from_unit": str(factor.from_unit),
+            "to_unit": str(factor.to_unit),
+            "factor": factor.factor,
+            "agreement": factor.agreement,
+            "derived_from": derived_from,
+            "status": EntryStatus.PROPOSED.value,
+        }
+        if at is not None:
+            values["created_at"] = at
+
+        await self._session.execute(
+            pg_insert(UnitConversionRow)
+            .values(**values)
+            .on_conflict_do_update(
+                constraint="uq_unit_conversions_test_units",
+                set_={
+                    "factor": factor.factor,
+                    "agreement": factor.agreement,
+                    "derived_from": derived_from,
+                },
+                where=(
+                    (UnitConversionRow.derived_from != "reviewer")
+                    & (
+                        UnitConversionRow.agreement.is_(None)
+                        | (UnitConversionRow.agreement > (factor.agreement or Decimal(0)))
+                    )
+                ),
+            )
+        )
+        await self._session.flush()
+
     async def add_critical_value(self, value: CriticalValue) -> None:
         """Used by a reviewer tool, never by the pipeline."""
         self._session.add(
@@ -212,4 +287,13 @@ def _to_test(row: CanonicalTestRow) -> CanonicalTest:
         status=EntryStatus(row.status),
         created_at=row.created_at,
         proposed_by=row.proposed_by,
+    )
+
+
+def _to_factor(row: UnitConversionRow) -> ConversionFactor:
+    return ConversionFactor(
+        from_unit=Unit(row.from_unit),
+        to_unit=Unit(row.to_unit),
+        factor=row.factor,
+        agreement=row.agreement,
     )
