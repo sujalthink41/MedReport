@@ -9,10 +9,10 @@ CP2 expands this with database, Redis, storage and model settings.
 
 from enum import StrEnum
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import Field, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, field_validator, model_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Environment(StrEnum):
@@ -37,7 +37,37 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
 
     # Comma-separated in the env file: MEDREPORT_CORS_ORIGINS=http://localhost:3000
-    cors_origins: list[str] = Field(default_factory=list)
+    cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=list)
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _split_commas(cls, value: object) -> object:
+        """Accept a comma-separated string, not just JSON.
+
+        pydantic-settings JSON-decodes any complex-typed field **inside the
+        source**, before validators run - so a plain
+        `MEDREPORT_CORS_ORIGINS=http://localhost:3000` raises a JSONDecodeError
+        whose message does not mention JSON at all. `NoDecode` on the annotation
+        is what hands us the raw string instead.
+
+        Nobody writes `["http://localhost:3000"]` in an env file by choice, and
+        the failure is confusing enough to cost an hour.
+        """
+        if not isinstance(value, str):
+            return value
+
+        text = value.strip()
+        if text.startswith("["):
+            # NoDecode turned the source's JSON decoding off, so if we want to
+            # keep accepting the JSON form - and we do, so an existing deployment
+            # does not break on upgrade - we have to decode it here.
+            import json
+
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError:
+                return value  # let pydantic report it as the type error it is
+        return [item.strip() for item in text.split(",") if item.strip()]
 
     database_url: str = "postgresql+asyncpg://medreport:medreport@localhost:5433/medreport"
     database_echo: bool = False

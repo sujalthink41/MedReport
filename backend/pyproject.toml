@@ -83,6 +83,8 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S", "ARG", "PLR2004"]
+# The eval harness prints its scorecard - that IS its output.
+"tests/evals/**" = ["S", "ARG", "PLR2004", "T201"]
 # Typographic lookalikes - full-width characters, curly apostrophes, non-breaking
 # spaces - are the SUBJECT of these tests, not an accident. Real lab PDFs are full
 # of them, and the point is that they normalise to the same key.

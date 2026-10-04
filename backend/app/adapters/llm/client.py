@@ -14,6 +14,7 @@ from typing import Any
 from pydantic import BaseModel, ValidationError
 
 from app.adapters.llm.router import ModelRouter
+from app.adapters.llm.strict_schema import to_strict
 from app.core.logging import get_logger
 from app.domain.errors import LLMInvalidOutputError, LLMUnavailableError
 from app.domain.ports.llm import LLMResult, Prompt, Purpose, Usage
@@ -75,7 +76,9 @@ class LiteLLMClient:
                     "type": "json_schema",
                     "json_schema": {
                         "name": schema.__name__,
-                        "schema": schema.model_json_schema(),
+                        # Transformed, not raw: Pydantic omits
+                        # additionalProperties and under-fills required.
+                        "schema": to_strict(schema.model_json_schema()),
                         "strict": True,
                     },
                 },
