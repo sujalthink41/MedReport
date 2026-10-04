@@ -10,6 +10,7 @@ from app.adapters.db.authz_repositories import (
     SqlMembershipRepository,
     SqlStaffRoleRepository,
 )
+from app.adapters.db.dictionary_repository import SqlDictionaryRepository
 from app.adapters.db.repositories import (
     SqlObservationRepository,
     SqlProfileRepository,
@@ -39,6 +40,7 @@ class SqlUnitOfWork:
         self.memberships = SqlMembershipRepository(self._session)
         self.staff_roles = SqlStaffRoleRepository(self._session)
         self.audit = SqlAuditLog(self._session)
+        self.dictionary = SqlDictionaryRepository(self._session)
         return self
 
     async def __aexit__(
@@ -89,6 +91,7 @@ class SessionUnitOfWork:
         self.memberships = SqlMembershipRepository(session)
         self.staff_roles = SqlStaffRoleRepository(session)
         self.audit = SqlAuditLog(session)
+        self.dictionary = SqlDictionaryRepository(session)
 
     async def __aenter__(self) -> Self:
         return self

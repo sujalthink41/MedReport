@@ -20,6 +20,7 @@ from types import TracebackType
 from typing import Protocol, Self
 
 from app.domain.ports.authz import AuditLog, MembershipRepository, StaffRoleRepository
+from app.domain.ports.dictionary import DictionaryRepository
 from app.domain.ports.repositories import (
     ObservationRepository,
     ProfileRepository,
@@ -51,6 +52,7 @@ class UnitOfWork(Protocol):
     memberships: MembershipRepository
     staff_roles: StaffRoleRepository
     audit: AuditLog
+    dictionary: DictionaryRepository
 
     async def __aenter__(self) -> Self: ...
 

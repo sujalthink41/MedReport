@@ -238,6 +238,7 @@ class InMemoryUnitOfWork:
         self.memberships = InMemoryMembershipRepository()
         self.staff_roles = InMemoryStaffRoleRepository()
         self.audit = RecordingAuditLog()
+        self.dictionary = InMemoryDictionaryRepository()
         self.committed = False
         self.rolled_back = False
 
@@ -272,3 +273,60 @@ class RecordingTaskQueue:
 
     async def enqueue(self, task: str, **kwargs: str) -> None:
         self.dispatched.append((task, kwargs))
+
+
+class InMemoryDictionaryRepository:
+    """The dictionary, in dicts. Keyed exactly like the real tables."""
+
+    def __init__(self) -> None:
+        self.tests: dict[str, object] = {}
+        self.aliases: dict[str, str] = {}
+        self.unmapped: dict[str, dict[str, object]] = {}
+        self.critical: dict[str, list[object]] = {}
+
+    async def resolve(self, keys: list[str]):  # type: ignore[no-untyped-def]
+        for key in keys:  # caller order is priority order
+            if key in self.aliases:
+                return self.aliases[key], key
+        return None
+
+    async def get(self, canonical_test_id: str):  # type: ignore[no-untyped-def]
+        return self.tests.get(canonical_test_id)
+
+    async def record_proposal(self, proposal, *, raw_name, keys, at):  # type: ignore[no-untyped-def]
+        canonical_id = proposal.canonical_id.strip().lower()
+        self.tests.setdefault(canonical_id, proposal)
+        for key in keys:
+            # setdefault, not assignment: an existing alias - possibly reviewed -
+            # must outrank a fresh guess, matching ON CONFLICT DO NOTHING.
+            self.aliases.setdefault(key, canonical_id)
+        return self.aliases[keys[0]]
+
+    async def record_unmapped(self, *, key, raw_name, at):  # type: ignore[no-untyped-def]
+        entry = self.unmapped.setdefault(
+            key, {"raw_example": raw_name, "occurrences": 0, "first_seen_at": at}
+        )
+        entry["occurrences"] = int(entry["occurrences"]) + 1
+        entry["last_seen_at"] = at
+
+    async def list_unmapped(self, *, limit: int = 100):  # type: ignore[no-untyped-def]
+        from app.domain.models.clinical import UnmappedName
+
+        rows = [
+            UnmappedName(
+                key=k,
+                raw_example=str(v["raw_example"]),
+                occurrences=int(v["occurrences"]),
+                first_seen_at=v["first_seen_at"],  # type: ignore[arg-type]
+                last_seen_at=v["last_seen_at"],  # type: ignore[arg-type]
+            )
+            for k, v in self.unmapped.items()
+        ]
+        return sorted(rows, key=lambda r: r.occurrences, reverse=True)[:limit]
+
+    async def critical_values_for(self, canonical_test_id: str):  # type: ignore[no-untyped-def]
+        from app.domain.models.clinical import EntryStatus
+
+        return [
+            c for c in self.critical.get(canonical_test_id, []) if c.status is EntryStatus.APPROVED
+        ]  # type: ignore[attr-defined]

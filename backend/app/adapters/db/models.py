@@ -307,3 +307,85 @@ class AccessAuditRow(Base, TimestampMixin):
         Index("ix_access_audit_actor", "actor_user_id", "created_at"),
         Index("ix_access_audit_subject", "subject_profile_id", "created_at"),
     )
+
+
+class CanonicalTestRow(Base, TimestampMixin):
+    """One marker. Starts empty; filled by the pipeline, reviewed by a human."""
+
+    __tablename__ = "canonical_tests"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    display_name: Mapped[str] = mapped_column(String(160), nullable=False)
+    panel: Mapped[str | None] = mapped_column(String(80))
+    canonical_unit: Mapped[str | None] = mapped_column(String(40))
+    sidedness: Mapped[str] = mapped_column(String(20), nullable=False, default="two_sided")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="proposed")
+    proposed_by: Mapped[str | None] = mapped_column(String(40))
+
+
+class TestAliasRow(Base, TimestampMixin):
+    """A printed name and the marker it resolves to.
+
+    The primary key IS the normalised key, so two concurrent reports proposing the
+    same alias collide in the database rather than creating two mappings. Without
+    that, the first thing the dictionary would do is split a trend.
+    """
+
+    __tablename__ = "test_aliases"
+
+    key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    canonical_test_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("canonical_tests.id", ondelete="CASCADE"), nullable=False
+    )
+    raw_example: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="proposed")
+
+    __table_args__ = (Index("ix_test_aliases_canonical", "canonical_test_id"),)
+
+
+class UnmappedNameRow(Base):
+    """Names we could not resolve. The dictionary's growth queue."""
+
+    __tablename__ = "unmapped_test_names"
+
+    key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    raw_example: Mapped[str] = mapped_column(Text, nullable=False)
+    occurrences: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    first_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    resolved_to: Mapped[str | None] = mapped_column(String(64))
+
+    __table_args__ = (Index("ix_unmapped_occurrences", "occurrences"),)
+
+
+class CriticalValueRow(Base, TimestampMixin):
+    """Thresholds that mean "seek care today".
+
+    The one table requiring human sign-off. Nothing fires unless status is
+    'approved', and the message is a stored template - never model-generated.
+    """
+
+    __tablename__ = "critical_values"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    canonical_test_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("canonical_tests.id", ondelete="CASCADE"), nullable=False
+    )
+    comparator: Mapped[str] = mapped_column(String(4), nullable=False)
+    threshold: Mapped[Decimal] = mapped_column(VALUE_NUMERIC, nullable=False)
+    unit: Mapped[str] = mapped_column(String(40), nullable=False)
+    message_template: Mapped[str] = mapped_column(Text, nullable=False)
+    source: Mapped[str] = mapped_column(String(160), nullable=False)
+
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="proposed")
+    reviewed_by: Mapped[str | None] = mapped_column(String(80))
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        CheckConstraint("comparator in ('lt','gt')", name="comparator_known"),
+        Index("ix_critical_values_test", "canonical_test_id", "status"),
+    )

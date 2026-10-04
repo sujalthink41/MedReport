@@ -82,6 +82,10 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S", "ARG", "PLR2004"]
+# Typographic lookalikes - full-width characters, curly apostrophes, non-breaking
+# spaces - are the SUBJECT of these tests, not an accident. Real lab PDFs are full
+# of them, and the point is that they normalise to the same key.
+"tests/domain/test_test_names.py" = ["S", "ARG", "PLR2004", "RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 # Belt and braces alongside import-linter. Fails fast, in the editor.
