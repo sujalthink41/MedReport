@@ -315,7 +315,7 @@ as a boring, repeatable script.
 | CP12 | Celery and async bridge | ✅ |
 | CP13 | Clinical dictionary (self-populating) | ✅ |
 | CP14 | Unit conversion (derived) | ✅ |
-| CP15 | Classification engine | ☐ |
+| CP15 | Classification engine and trends | ✅ |
 | CP16 | LLM port and LiteLLM adapter | ☐ |
 | CP17 | Retry / cache / trace decorators | ☐ |
 | CP18 | Extraction prompt and golden set | ☐ |
