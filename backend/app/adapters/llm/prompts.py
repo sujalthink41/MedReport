@@ -16,7 +16,7 @@ doing one thing, and means the call that needs world knowledge carries no PHI.
 
 from app.domain.ports.llm import ImagePart, Prompt
 
-EXTRACTION_PROMPT_VERSION = "2026-10-04.1"
+EXTRACTION_PROMPT_VERSION = "2026-10-04.2"  # behaviourally anchored confidence
 
 _EXTRACTION_SYSTEM = """\
 You transcribe laboratory reports. You are not a clinician and you are not an \
@@ -65,16 +65,25 @@ VALUES AS PRINTED
 - A value printed with a trailing flag like "11.2 L" -> value "11.2", flag "L"
 
 CONFIDENCE
-Set it honestly, per row. It is used to decide what a human reviews.
-- 1.0  crisp digital text, unambiguous columns
-- 0.8  clear photo, slight skew
-- 0.6  blurred, faint, or you had to choose between two plausible readings
-- 0.3  you are mostly guessing the digits
-- 0.0  with value_text null, if you cannot read it at all
+Set it per row, and make it DISCRIMINATE. If every row on a page carries the same number, you have not assessed anything - you have filled in a field.
 
-Being wrong while confident is the only failure mode that actually harms someone. \
-Uncertainty costs us a human glance. Prefer it.\
-"""
+Anchor it to what you actually did, not to how you feel:
+
+- 1.0   You were given an embedded text layer and these exact characters appear in it. Only ever justified when a text layer was supplied.
+- 0.9   No text layer, but the characters are large, crisp and unambiguous.
+- 0.75  Readable, but you resolved at least one character by context rather than by seeing it clearly - a cramped decimal point, a 1 that could be a 7, a digit touching a table rule.
+- 0.5   You chose between two plausible readings.
+- 0.3   You are substantially guessing the digits.
+- 0.0   with value_text null, if you cannot read it at all.
+
+Two cautions, both of which change what a person is told about their own body:
+
+- A misplaced or missed DECIMAL POINT changes a value by a factor of ten. If the decimal is small, faint, or sits against a gridline, lower the confidence even when the digits themselves are clear.
+- Long numbers are riskier than short ones. "134.25" has more chances to be wrong than "21".
+
+If this page has no embedded text layer, every character you report came from pixels, and 1.0 is not available to you.
+
+Being wrong while confident is the only failure mode that actually harms someone. Uncertainty costs us a human glance. Prefer it."""
 
 _EXTRACTION_USER_WITH_TEXT = """\
 Transcribe every result on this page.

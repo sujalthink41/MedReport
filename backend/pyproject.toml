@@ -23,6 +23,8 @@ dependencies = [
     "redis>=8.1.0",
     "celery>=5.6.3",
     "litellm>=1.104.0",
+    "pypdfium2>=5.13.0",
+    "pillow>=12.3.0",
 ]
 
 [dependency-groups]
@@ -82,6 +84,10 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+# Prompts are prose, not code. A line limit here means wrapping sentences with
+# backslash continuations, which is fragile for no reader benefit - the prompt is
+# read as rendered text, never as source lines.
+"app/adapters/llm/prompts.py" = ["E501"]
 "tests/**" = ["S", "ARG", "PLR2004"]
 # The eval harness prints its scorecard - that IS its output.
 "tests/evals/**" = ["S", "ARG", "PLR2004", "T201"]
@@ -124,7 +130,7 @@ ignore_missing_imports = true
 # Libraries that ship no type information. Named explicitly rather than silencing
 # missing imports globally, so a typo in one of OUR module paths still fails.
 [[tool.mypy.overrides]]
-module = ["boto3.*", "botocore.*", "google.*", "celery.*"]
+module = ["boto3.*", "botocore.*", "google.*", "celery.*", "pypdfium2.*"]
 ignore_missing_imports = true
 
 # Celery's @task decorator is untyped, so mypy treats every task as untyped too.
