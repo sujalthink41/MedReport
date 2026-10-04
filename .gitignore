@@ -17,7 +17,9 @@ venv/
 node_modules/
 .next/
 
-# data — NEVER commit health data
+# data - NEVER commit health data
+backend/tests/golden/reports/
+backend/tests/golden/truth/
 tests/golden/reports/
 *.pdf
 *.jpg

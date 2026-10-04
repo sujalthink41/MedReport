@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install up down logs dev worker flower lint fmt types arch test test-fast cov check clean migrate migration db-shell
+.PHONY: help install up down logs dev worker flower eval lint fmt types arch test test-fast cov check clean migrate migration db-shell
 
 help:  ## show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -26,6 +26,9 @@ worker:  ## run a celery worker (reports + default queues)
 
 flower:  ## celery monitoring UI on :5555
 	uv run celery -A app.adapters.queue.tasks flower --port=5555
+
+eval:  ## score extraction against the golden set (needs an API key + real reports)
+	uv run pytest tests/evals -q -s -m eval
 
 lint:  ## ruff lint
 	uv run ruff check app tests

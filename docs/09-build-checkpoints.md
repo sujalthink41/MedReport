@@ -318,7 +318,7 @@ as a boring, repeatable script.
 | CP15 | Classification engine and trends | ✅ |
 | CP16 | LLM port and LiteLLM adapter | ✅ |
 | CP17 | Retry / repair / cache / trace | ✅ |
-| CP18 | Extraction prompt and golden set | ☐ |
+| CP18 | Extraction prompt and golden set | ✅ |
 | CP19 | LangGraph skeleton | ☐ |
 | CP20 | Extract and verify nodes | ☐ |
 | CP21 | Merge, normalize, classify wired | ☐ |
