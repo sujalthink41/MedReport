@@ -7,7 +7,7 @@ never learns what it got.
 When CP10 adds a second storage adapter, this file changes and nothing else does.
 """
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Annotated
 
 from fastapi import Depends, Request
@@ -16,13 +16,21 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.adapters.auth.google import GoogleIdentityProvider
 from app.adapters.auth.jwt import JwtTokenService
+from app.adapters.db.authz_repositories import (
+    SqlAuditLog,
+    SqlMembershipRepository,
+    SqlStaffRoleRepository,
+)
 from app.adapters.db.session import session_scope
 from app.adapters.db.uow import SessionUnitOfWork
 from app.adapters.system import SystemClock, Uuid4Generator
 from app.application.use_cases.sign_in import SignIn
 from app.core.config import Settings, get_settings
 from app.domain.errors import InvalidTokenError, NotFoundError
+from app.domain.models.authz import Permission
+from app.domain.models.identifiers import ProfileId
 from app.domain.models.user import User
+from app.domain.services.policy import AuthorizationContext, require
 
 # auto_error=False so a missing header reaches our handler as InvalidTokenError and
 # comes back in the standard error envelope. Left at the default, FastAPI raises its
@@ -131,3 +139,67 @@ async def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+# ---------------------------------------------------------------------------
+# Authorization
+# ---------------------------------------------------------------------------
+
+
+async def get_authz_context(user: CurrentUser, session: SessionDep) -> AuthorizationContext:
+    """Gather the facts, once per request.
+
+    Two queries - memberships and staff roles - and then every permission check in
+    the request is a pure in-memory lookup. The alternative, querying inside each
+    check, turns a page that touches five resources into five extra round trips and
+    makes the policy layer untestable without a database.
+
+    One clock reading governs the whole request, so a staff role cannot expire
+    halfway through handling it.
+    """
+    now = SystemClock().now()
+    memberships = await SqlMembershipRepository(session).roles_for_user(user.id)
+    staff_roles = await SqlStaffRoleRepository(session).roles_for_user(user.id, now=now)
+
+    return AuthorizationContext(
+        user_id=user.id,
+        memberships=memberships,
+        staff_roles=staff_roles,
+    )
+
+
+AuthzDep = Annotated[AuthorizationContext, Depends(get_authz_context)]
+
+
+def requires(permission: Permission) -> Callable[..., Awaitable[AuthorizationContext]]:
+    """Build a dependency that enforces one global permission.
+
+    Used as ``Depends(requires(Permission.DICTIONARY_WRITE))`` on staff routes.
+    Profile-scoped checks cannot work this way - the profile id lives in the path,
+    so those call ``require(...)`` inside the handler via ``require_on_profile``.
+    """
+
+    async def dependency(context: AuthzDep) -> AuthorizationContext:
+        require(context, permission)
+        return context
+
+    return dependency
+
+
+def require_on_profile(
+    context: AuthorizationContext, permission: Permission, profile_id: ProfileId
+) -> None:
+    """Enforce a profile-scoped permission inside a handler or use case.
+
+    Deliberately a plain function rather than a dependency: the profile id is only
+    known after the path has been parsed, and the same check must be callable from
+    the Celery worker, where no FastAPI dependency exists.
+    """
+    require(context, permission, profile_id=profile_id)
+
+
+def get_audit_log(session: SessionDep) -> SqlAuditLog:
+    return SqlAuditLog(session)
+
+
+AuditDep = Annotated[SqlAuditLog, Depends(get_audit_log)]

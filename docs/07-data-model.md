@@ -41,26 +41,31 @@ An owner always exists; deleting the last owner is forbidden.
 ### RBAC — staff capabilities only
 
 ```
-permissions
-  id                          -- 'report:read_any', 'dictionary:write'
-  description
-
-roles
-  id, name, is_system         -- system roles cannot be deleted
-  description
-
-role_permissions
-  role_id, permission_id
-  UNIQUE (role_id, permission_id)
-
 user_roles                    -- GLOBAL roles. staff only. normally empty.
-  user_id, role_id, granted_by, granted_at, expires_at
-  UNIQUE (user_id, role_id)
+  id, user_id -> users, role
+  granted_by, granted_at, expires_at
+  UNIQUE (user_id, role)
 ```
 
-`expires_at` is deliberate: elevated access should be temporary by default.
+`expires_at` is deliberate: elevated access should be temporary by default. The
+query filters on it, so a lapsed grant stops working the moment it lapses even if
+nothing ever deletes the row.
 
-**Seeded roles:** `support` (metadata + traces, no values), `clinical_curator`
+**Simplified from the original design.** This started as four tables —
+`permissions`, `roles`, `role_permissions`, `user_roles` — so roles would be
+runtime-configurable data. In practice the permission vocabulary and the
+role→permission mapping live in `app/domain/models/authz.py` as an enum and a dict:
+
+* mypy checks `Permission.REPORT_DELETE`; it cannot check a string from a table
+* the policy layer stays a pure function, testable with no database at all
+* adding a role is a one-line dict entry, which is not meaningfully harder than
+  inserting rows
+
+The three dropped tables only pay off when non-engineers need to edit roles in a
+live system. Nobody does yet, and building them now would be schema we maintain for
+a feature that does not exist. Reintroduce them if that changes.
+
+**Roles:** `support` (metadata + traces, no values), `clinical_curator`
 (dictionary, thresholds, critical values), `admin` (user and role administration —
 still not raw PHI).
 

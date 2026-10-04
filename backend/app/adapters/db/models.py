@@ -41,6 +41,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -208,4 +209,101 @@ class ObservationRow(Base, TimestampMixin):
         ),
         # Loading one report's results.
         Index("ix_observations_report", "report_id"),
+    )
+
+
+class ProfileMemberRow(Base, TimestampMixin):
+    """Who may act on whose profile. This table IS the sharing feature.
+
+    Two siblings caring for a parent are two rows. Modelling access as a global
+    role instead would collapse the moment a second person is added.
+    """
+
+    __tablename__ = "profile_members"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    profile_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    role: Mapped[str] = mapped_column(String(20), nullable=False)
+
+    invited_by: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        # One membership per person per profile. Two rows with different roles
+        # would make "what may they do?" ambiguous, and ambiguity in an
+        # authorization check resolves differently depending on query order.
+        UniqueConstraint("profile_id", "user_id", name="uq_profile_members_profile_user"),
+        Index("ix_profile_members_user", "user_id"),
+    )
+
+
+class UserRoleRow(Base):
+    """Global staff roles. Empty for ordinary users."""
+
+    __tablename__ = "user_roles"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    role: Mapped[str] = mapped_column(String(40), nullable=False)
+
+    granted_by: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    granted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    """Elevated access should be temporary by default.
+
+    A support role granted for one investigation and never revoked is how an
+    organisation ends up with twelve permanent admins nobody remembers approving.
+    """
+
+    __table_args__ = (UniqueConstraint("user_id", "role", name="uq_user_roles_user_role"),)
+
+
+class AccessAuditRow(Base, TimestampMixin):
+    """Append-only record of staff access to user data.
+
+    Not optional in a health product. If a support engineer reads a report, there
+    must be a durable record of who, what, when and why - both because regulators
+    expect it and because it is the only deterrent that actually works.
+    """
+
+    __tablename__ = "access_audit"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    actor_user_id: Mapped[UUID] = mapped_column(
+        # No CASCADE: deleting a staff account must not erase the record of what
+        # they accessed. The audit trail outlives the employee.
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    resource_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    resource_id: Mapped[str | None] = mapped_column(String(64))
+    subject_profile_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+
+    via: Mapped[str] = mapped_column(String(20), nullable=False)
+    """membership | role | break_glass"""
+
+    reason: Mapped[str | None] = mapped_column(Text)
+    """Required for break_glass. A typed justification, stored forever."""
+
+    request_id: Mapped[str | None] = mapped_column(String(64))
+    ip: Mapped[str | None] = mapped_column(String(45))
+
+    __table_args__ = (
+        Index("ix_access_audit_actor", "actor_user_id", "created_at"),
+        Index("ix_access_audit_subject", "subject_profile_id", "created_at"),
     )

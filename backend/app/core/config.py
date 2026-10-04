@@ -68,7 +68,7 @@ class Settings(BaseSettings):
         if self.environment is not Environment.LOCAL and "dev-only" in self.jwt_secret:
             raise ValueError(
                 "MEDREPORT_JWT_SECRET must be set outside local. "
-                "Generate one: python -c \"import secrets;print(secrets.token_urlsafe(48))\""
+                'Generate one: python -c "import secrets;print(secrets.token_urlsafe(48))"'
             )
         return self
 
