@@ -11,7 +11,7 @@ operation into several, so a failure halfway through leaves the database in a st
 nobody intended. The transaction belongs to the caller — see ``uow.py``.
 """
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,6 +40,15 @@ class SqlUserRepository:
     async def find_by_google_sub(self, google_sub: str) -> User | None:
         result = await self._session.execute(
             select(UserRow).where(UserRow.google_sub == google_sub)
+        )
+        row = result.scalars().first()
+        return mappers.user_to_domain(row) if row else None
+
+    async def find_by_email(self, email: str) -> User | None:
+        result = await self._session.execute(
+            # Case-insensitive: people type their address however they like, and an
+            # invitation that silently fails on capitalisation is a bad bug.
+            select(UserRow).where(func.lower(UserRow.email) == email.strip().lower())
         )
         row = result.scalars().first()
         return mappers.user_to_domain(row) if row else None

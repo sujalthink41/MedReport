@@ -309,7 +309,7 @@ as a boring, repeatable script.
 | CP6 | Repositories and Unit of Work | ✅ |
 | CP7 | Authentication — Google OAuth | ✅ |
 | CP8 | Authorization — RBAC and policy layer | ✅ |
-| CP9 | Profiles and sharing (reference slice) | ☐ |
+| CP9 | Profiles and sharing (reference slice) | ✅ |
 | CP10 | Storage port, two adapters | ☐ |
 | CP11 | Upload endpoint | ☐ |
 | CP12 | Celery and async bridge | ☐ |

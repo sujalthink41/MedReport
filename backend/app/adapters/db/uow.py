@@ -5,6 +5,11 @@ from typing import Self
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.adapters.db.authz_repositories import (
+    SqlAuditLog,
+    SqlMembershipRepository,
+    SqlStaffRoleRepository,
+)
 from app.adapters.db.repositories import (
     SqlObservationRepository,
     SqlProfileRepository,
@@ -31,6 +36,9 @@ class SqlUnitOfWork:
         self.profiles = SqlProfileRepository(self._session)
         self.reports = SqlReportRepository(self._session)
         self.observations = SqlObservationRepository(self._session)
+        self.memberships = SqlMembershipRepository(self._session)
+        self.staff_roles = SqlStaffRoleRepository(self._session)
+        self.audit = SqlAuditLog(self._session)
         return self
 
     async def __aexit__(
@@ -78,6 +86,9 @@ class SessionUnitOfWork:
         self.profiles = SqlProfileRepository(session)
         self.reports = SqlReportRepository(session)
         self.observations = SqlObservationRepository(session)
+        self.memberships = SqlMembershipRepository(session)
+        self.staff_roles = SqlStaffRoleRepository(session)
+        self.audit = SqlAuditLog(session)
 
     async def __aenter__(self) -> Self:
         return self

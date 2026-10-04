@@ -27,6 +27,7 @@ from app.domain.models import (
     ReportId,
     UserId,
 )
+from app.domain.models.authz import MembershipRole, StaffRole
 from app.domain.models.user import User
 
 
@@ -40,6 +41,12 @@ class InMemoryUserRepository:
     async def find_by_google_sub(self, google_sub: str) -> User | None:
         for user in self.items.values():
             if user.google_sub == google_sub:
+                return user
+        return None
+
+    async def find_by_email(self, email: str) -> User | None:
+        for user in self.items.values():
+            if user.email.lower() == email.strip().lower():
                 return user
         return None
 
@@ -158,6 +165,59 @@ class InMemoryObservationRepository:
             del self.items[key]
 
 
+class InMemoryMembershipRepository:
+    """Keyed on (profile, user), exactly like the unique constraint in Postgres.
+
+    A dict keyed that way makes a duplicate membership structurally impossible,
+    which is the same guarantee the real table gives - so the fake cannot pass a
+    test that production would fail.
+    """
+
+    def __init__(self) -> None:
+        self.grants: dict[tuple[ProfileId, UserId], MembershipRole] = {}
+
+    async def roles_for_user(self, user_id: UserId) -> dict[ProfileId, MembershipRole]:
+        return {pid: role for (pid, uid), role in self.grants.items() if uid == user_id}
+
+    async def members_of(self, profile_id: ProfileId) -> dict[UserId, MembershipRole]:
+        return {uid: role for (pid, uid), role in self.grants.items() if pid == profile_id}
+
+    async def grant(self, *, profile_id, user_id, role, invited_by, at) -> None:  # type: ignore[no-untyped-def]
+        self.grants[(profile_id, user_id)] = role
+
+    async def revoke(self, profile_id: ProfileId, user_id: UserId) -> None:
+        self.grants.pop((profile_id, user_id), None)
+
+    async def count_owners(self, profile_id: ProfileId) -> int:
+        return sum(
+            1
+            for (pid, _), role in self.grants.items()
+            if pid == profile_id and role is MembershipRole.OWNER
+        )
+
+
+class InMemoryStaffRoleRepository:
+    def __init__(self) -> None:
+        self.roles: dict[UserId, frozenset[StaffRole]] = {}
+
+    async def roles_for_user(self, user_id: UserId, *, now) -> frozenset[StaffRole]:  # type: ignore[no-untyped-def]
+        return self.roles.get(user_id, frozenset())
+
+
+class RecordingAuditLog:
+    """Keeps every record so a test can assert that access WAS logged.
+
+    Audit is a requirement, not a side effect - a test that proves support can
+    read a trace should also prove the read left a record.
+    """
+
+    def __init__(self) -> None:
+        self.entries: list[dict[str, object]] = []
+
+    async def record(self, **fields: object) -> None:
+        self.entries.append(fields)
+
+
 class InMemoryUnitOfWork:
     """A unit of work that records whether it was committed.
 
@@ -175,6 +235,9 @@ class InMemoryUnitOfWork:
         self.profiles = InMemoryProfileRepository()
         self.reports = InMemoryReportRepository()
         self.observations = InMemoryObservationRepository()
+        self.memberships = InMemoryMembershipRepository()
+        self.staff_roles = InMemoryStaffRoleRepository()
+        self.audit = RecordingAuditLog()
         self.committed = False
         self.rolled_back = False
 

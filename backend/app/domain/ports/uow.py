@@ -19,6 +19,7 @@ Two reasons this is worth having on top of the per-request session in ``deps.py`
 from types import TracebackType
 from typing import Protocol, Self
 
+from app.domain.ports.authz import AuditLog, MembershipRepository, StaffRoleRepository
 from app.domain.ports.repositories import (
     ObservationRepository,
     ProfileRepository,
@@ -47,6 +48,9 @@ class UnitOfWork(Protocol):
     profiles: ProfileRepository
     reports: ReportRepository
     observations: ObservationRepository
+    memberships: MembershipRepository
+    staff_roles: StaffRoleRepository
+    audit: AuditLog
 
     async def __aenter__(self) -> Self: ...
 

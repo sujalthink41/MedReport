@@ -33,6 +33,14 @@ class UserRepository(Protocol):
         """
         ...
 
+    async def find_by_email(self, email: str) -> User | None:
+        """Used only for invitations.
+
+        Email is the handle people know; google_sub remains the identity. Never
+        used for authentication - only to answer "who do I share this with?".
+        """
+        ...
+
     async def add(self, user: User) -> None: ...
 
     async def update(self, user: User) -> None: ...

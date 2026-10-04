@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.adapters.db.session import create_engine, create_session_factory
 from app.api.error_handlers import register_error_handlers
 from app.api.middleware import AccessLogMiddleware, RequestContextMiddleware
-from app.api.v1.routers import auth, health
+from app.api.v1.routers import auth, health, profiles
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging, get_logger
 
@@ -94,6 +94,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1 = APIRouter(prefix=settings.api_v1_prefix)
     v1.include_router(health.router)
     v1.include_router(auth.router)
+    v1.include_router(profiles.router)
     app.include_router(v1)
 
     return app
