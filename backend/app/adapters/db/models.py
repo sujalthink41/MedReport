@@ -31,6 +31,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -425,4 +426,57 @@ class UnitConversionRow(Base, TimestampMixin):
         UniqueConstraint(
             "canonical_test_id", "from_unit", "to_unit", name="uq_unit_conversions_test_units"
         ),
+    )
+
+
+class LlmTraceRow(Base, TimestampMixin):
+    """Every model call, with its prompt and reply.
+
+    The day a user says "it showed my haemoglobin wrong", this table is the only
+    way to find out why. The parsed result tells you what we concluded; only the
+    raw text tells you what the model actually said.
+
+    It lives in OUR Postgres, not in a hosted observability product, precisely
+    because prompts here contain health data. That is also why the application
+    logs carry identifiers only - the content is here, access-controlled, and
+    nowhere else.
+    """
+
+    __tablename__ = "llm_traces"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+
+    report_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("reports.id", ondelete="CASCADE")
+    )
+    """CASCADE: deleting a report deletes its traces.
+
+    "Delete my data" has to mean it. A prompt containing someone's lab values is
+    health data whatever table it sits in.
+    """
+
+    purpose: Mapped[str] = mapped_column(String(32), nullable=False)
+    model: Mapped[str] = mapped_column(String(80), nullable=False)
+    page: Mapped[int | None] = mapped_column(Integer)
+
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    response: Mapped[str | None] = mapped_column(Text)
+    """Null when the call failed before producing one."""
+
+    prompt_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    completion_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    cost_usd: Mapped[Decimal] = mapped_column(Numeric(12, 6), nullable=False, default=0)
+    latency_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="ok")
+    error: Mapped[str | None] = mapped_column(Text)
+    cached: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    request_id: Mapped[str | None] = mapped_column(String(64))
+    """Ties a model call back to the HTTP request or task that caused it."""
+
+    __table_args__ = (
+        Index("ix_llm_traces_report", "report_id", "created_at"),
+        # Cost per report is the number that decides whether the business works.
+        Index("ix_llm_traces_purpose_created", "purpose", "created_at"),
     )

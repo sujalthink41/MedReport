@@ -330,3 +330,67 @@ class InMemoryDictionaryRepository:
         return [
             c for c in self.critical.get(canonical_test_id, []) if c.status is EntryStatus.APPROVED
         ]  # type: ignore[attr-defined]
+
+
+class FakeLLM:
+    """A model that returns whatever the test told it to.
+
+    Queue up answers, or an exception to raise. Lets the whole AI pipeline be
+    tested with no API key, no network and no cost - which is what makes it
+    possible to assert on failure paths at all. You cannot reliably ask a real
+    provider to rate-limit you on demand.
+    """
+
+    def __init__(self) -> None:
+        self.responses: list[object] = []
+        self.raise_: Exception | None = None
+        self.calls: list[tuple[str, object]] = []
+        self.fail_times = 0
+
+    def returns(self, *values: object) -> "FakeLLM":
+        self.responses.extend(values)
+        return self
+
+    def fails(self, error: Exception, times: int = 1) -> "FakeLLM":
+        """Fail the next `times` calls, then behave normally.
+
+        Exactly what a retry test needs: transient failure followed by success.
+        """
+        self.raise_ = error
+        self.fail_times = times
+        return self
+
+    async def complete(self, *, prompt, schema, purpose):  # type: ignore[no-untyped-def]
+        from decimal import Decimal
+
+        from app.domain.ports.llm import LLMResult, Usage
+
+        self.calls.append((purpose.value, prompt))
+
+        if self.fail_times > 0 and self.raise_ is not None:
+            self.fail_times -= 1
+            raise self.raise_
+
+        if not self.responses:
+            raise AssertionError(f"FakeLLM had no response queued for {purpose.value}")
+
+        value = self.responses.pop(0)
+        return LLMResult(
+            value=value,
+            raw=value.model_dump_json() if hasattr(value, "model_dump_json") else str(value),
+            usage=Usage(
+                model="fake",
+                prompt_tokens=100,
+                completion_tokens=50,
+                cost_usd=Decimal("0.001"),
+                latency_ms=10,
+            ),
+        )
+
+
+class RecordingTraceWriter:
+    def __init__(self) -> None:
+        self.rows: list[dict[str, object]] = []
+
+    async def record(self, **fields: object) -> None:
+        self.rows.append(fields)

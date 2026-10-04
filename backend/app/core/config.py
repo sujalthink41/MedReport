@@ -60,6 +60,23 @@ class Settings(BaseSettings):
     r2_bucket: str = ""
     signed_url_ttl_seconds: int = 300
 
+    # --- models -----------------------------------------------------------
+    # Model names are configuration, not code. Provider line-ups change every few
+    # months and this product will outlive several of them, so switching is an
+    # environment variable rather than a deploy.
+    openai_api_key: str = ""
+    model_vision: str = "gpt-5"
+    """Reads pages. Needs vision and accuracy; this is the expensive one."""
+
+    model_cheap: str = "gpt-5-mini"
+    """Per-marker copy. Cached by (marker, band) across every user."""
+
+    model_strong: str = "gpt-5"
+    """Cross-marker reasoning and the prep sheet. Low volume, high value."""
+
+    llm_timeout_seconds: int = 180
+    llm_max_attempts: int = 4
+
     google_client_id: str = ""
     jwt_secret: str = "dev-only-insecure-secret-change-me-32chars"  # noqa: S105
     jwt_ttl_minutes: int = 60 * 24 * 14  # two weeks; a health app is not a bank

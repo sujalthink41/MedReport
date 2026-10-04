@@ -22,10 +22,38 @@ from app.api.middleware import AccessLogMiddleware, RequestContextMiddleware
 from app.api.v1.routers import auth, health, profiles, reports
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging, get_logger
+from app.domain.ports.llm import LLMClient
 from app.domain.ports.queue import TaskQueue
 from app.domain.ports.services import FileStorage
 
 log = get_logger(__name__)
+
+
+def build_llm(settings: Settings) -> LLMClient:
+    """Compose the model stack.
+
+    Order matters, outermost first:
+
+        Retrying   provider failures - back off and resend
+          Repairing  schema failures - show the error and ask again
+            Caching    identical requests within one run
+              LiteLLM    the actual call
+
+    Repair sits INSIDE retry so a repaired call still benefits from backoff if
+    the provider blips mid-correction. Caching sits innermost so a retry of a
+    genuinely failed call is not served a stale success.
+
+    Tracing is applied per call rather than here, because it needs the report id
+    and page number that only the pipeline knows.
+    """
+    from app.adapters.llm.client import LiteLLMClient
+    from app.adapters.llm.resilience import CachingLLM, RepairingLLM, RetryingLLM
+    from app.adapters.llm.router import ModelRouter
+
+    return RetryingLLM(
+        RepairingLLM(CachingLLM(LiteLLMClient(ModelRouter(settings), settings.openai_api_key))),
+        max_attempts=settings.llm_max_attempts,
+    )
 
 
 def build_queue(settings: Settings) -> TaskQueue:
@@ -93,6 +121,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.session_factory = create_session_factory(engine)
     app.state.storage = build_storage(settings)
     app.state.queue = build_queue(settings)
+    app.state.llm = build_llm(settings)
     log.info("storage_ready", backend=settings.storage_backend)
 
     try:

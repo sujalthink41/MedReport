@@ -316,8 +316,8 @@ as a boring, repeatable script.
 | CP13 | Clinical dictionary (self-populating) | ✅ |
 | CP14 | Unit conversion (derived) | ✅ |
 | CP15 | Classification engine and trends | ✅ |
-| CP16 | LLM port and LiteLLM adapter | ☐ |
-| CP17 | Retry / cache / trace decorators | ☐ |
+| CP16 | LLM port and LiteLLM adapter | ✅ |
+| CP17 | Retry / repair / cache / trace | ✅ |
 | CP18 | Extraction prompt and golden set | ☐ |
 | CP19 | LangGraph skeleton | ☐ |
 | CP20 | Extract and verify nodes | ☐ |

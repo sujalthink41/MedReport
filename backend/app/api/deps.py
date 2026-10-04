@@ -30,6 +30,7 @@ from app.domain.errors import InvalidTokenError, NotFoundError
 from app.domain.models.authz import Permission
 from app.domain.models.identifiers import ProfileId
 from app.domain.models.user import User
+from app.domain.ports.llm import LLMClient
 from app.domain.ports.queue import TaskQueue
 from app.domain.ports.services import FileStorage
 from app.domain.services.policy import AuthorizationContext, require
@@ -77,6 +78,15 @@ def get_uow(session: SessionDep) -> SessionUnitOfWork:
 
 
 UowDep = Annotated[SessionUnitOfWork, Depends(get_uow)]
+
+
+def get_llm(request: Request) -> LLMClient:
+    """The model client built once at startup, wrapped in its decorators."""
+    client: LLMClient = request.app.state.llm
+    return client
+
+
+LLMDep = Annotated[LLMClient, Depends(get_llm)]
 
 
 def get_storage(request: Request) -> FileStorage:
